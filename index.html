@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ozone Games — Student Games Lab</title>
+  <meta name="description" content="Games built by students. No names. All skill.">
+  <script src="https://unpkg.com/@lottiefiles/lottie-player@2.0.3/dist/lottie-player.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --sky-top:     #a8d8f0;
+      --sky-mid:     #c5e8ff;
+      --sky-bottom:  #e8f6ff;
+      --cloud:       rgba(255, 255, 255, 0.94);
+      --cloud-glass: rgba(255, 255, 255, 0.72);
+      --deep:        #0b3d91;
+      --medium:      #1565c0;
+      --soft:        #42a5f5;
+      --faint:       #90caf9;
+      --sun:         #ffd740;
+      --coral:       #ff6b9d;
+      --txt:         #0a2540;
+      --txt-soft:    #2a5f8f;
+      --txt-faint:   #6fa8d0;
+      --shadow-sm:   0 4px 16px rgba(20, 80, 160, 0.10);
+      --shadow-md:   0 8px 32px rgba(20, 80, 160, 0.14), 0 2px 8px rgba(20, 80, 160, 0.08);
+      --shadow-lg:   0 20px 56px rgba(20, 80, 160, 0.22), 0 6px 20px rgba(20, 80, 160, 0.12);
+      --r-card: 22px; --r-btn: 50px; --r-tag: 20px; --r-sm: 10px;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; font-size: 16px; }
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: linear-gradient(180deg, var(--sky-top) 0%, var(--sky-mid) 35%, var(--sky-bottom) 100%);
+      min-height: 100vh;
+      color: var(--txt);
+      overflow-x: hidden;
+      position: relative;
+    }
+    .cloud-layer { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+    .cloud-shape { position: absolute; background: white; border-radius: 60px; animation: cloud-drift linear infinite; }
+    .cloud-shape::before, .cloud-shape::after { content: ''; position: absolute; background: inherit; border-radius: 50%; }
+    @keyframes cloud-drift {
+      0%   { transform: translateX(-350px); opacity: 0; }
+      8%   { opacity: var(--op, 0.55); }
+      92%  { opacity: var(--op, 0.55); }
+      100% { transform: translateX(calc(100vw + 350px)); opacity: 0; }
+    }
+    .cl1 { width:200px; height:64px; top: 7%; animation-duration:60s; animation-delay:0s; --op:.55; }
+    .cl1::before { width:100px; height:100px; top:-55px; left:22px; }
+    .cl1::after  { width:80px;  height:80px;  top:-42px; left:88px; }
+    .cl2 { width:130px; height:46px; top:16%; animation-duration:80s; animation-delay:-28s; --op:.42; }
+    .cl2::before { width:65px; height:65px; top:-36px; left:16px; }
+    .cl2::after  { width:52px; height:52px; top:-26px; left:58px; }
+    .cl3 { width:240px; height:74px; top:28%; animation-duration:70s; animation-delay:-12s; --op:.48; }
+    .cl3::before { width:120px; height:120px; top:-66px; left:28px; }
+    .cl3::after  { width:92px;  height:92px;  top:-48px; left:110px; }
+    .cl4 { width:160px; height:56px; top:52%; animation-duration:95s; animation-delay:-45s; --op:.32; }
+    .cl4::before { width:80px; height:80px; top:-44px; left:18px; }
+    .cl4::after  { width:62px; height:62px; top:-32px; left:72px; }
+    .cl5 { width:110px; height:40px; top:74%; animation-duration:85s; animation-delay:-62s; --op:.28; }
+    .cl5::before { width:55px; height:55px; top:-32px; left:14px; }
+    .cl5::after  { width:44px; height:44px; top:-24px; left:48px; }
+    .page { position: relative; z-index: 1; }
+    .container { padding-left: max(20px, calc((100vw - 1120px) / 2)); padding-right: max(20px, calc((100vw - 1120px) / 2)); }
+    nav {
+      position: sticky; top: 0; z-index: 200;
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      background: rgba(185, 225, 255, 0.70);
+      border-bottom: 1px solid rgba(255,255,255,0.65);
+      height: 62px; display: flex; align-items: center; gap: 16px;
+    }
+    .nav-inner { width: 100%; display: flex; align-items: center; gap: 16px; }
+    .nav-logo {
+      font-family: 'Fredoka', sans-serif; font-size: 1.45rem; font-weight: 700;
+      color: var(--deep); text-decoration: none; display: flex; align-items: center; gap: 10px;
+    }
+    .nav-pip {
+      width:10px; height:10px; border-radius:50%; background: var(--sun);
+      box-shadow: 0 0 10px var(--sun), 0 0 20px rgba(255,215,64,0.4);
+      animation: pip-pulse 2.4s ease-in-out infinite;
+    }
+    @keyframes pip-pulse { 0%,100%{transform:scale(1);opacity:1;} 50%{transform:scale(1.4);opacity:0.7;} }
+    .nav-spacer { flex: 1; }
+    .nav-count {
+      font-size: 0.82rem; font-weight: 600; color: var(--txt-soft);
+      background: var(--cloud-glass); border: 1px solid rgba(255,255,255,0.7);
+      padding: 4px 12px; border-radius: var(--r-tag); backdrop-filter: blur(8px);
+    }
+    .hero {
+      padding: 72px 0 52px;
+      display: grid; grid-template-columns: 1fr 260px; gap: 48px; align-items: center;
+    }
+    .hero-eyebrow {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-size: 0.76rem; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase;
+      color: var(--medium); background: rgba(255,255,255,0.75);
+      border: 1.5px solid rgba(21,101,192,0.18); border-radius: var(--r-tag);
+      padding: 6px 16px; margin-bottom: 22px;
+    }
+    .hero-eyebrow::before {
+      content:''; width:6px; height:6px; border-radius:50%;
+      background: var(--coral); animation: pip-pulse 1.8s ease-in-out infinite;
+    }
+    .hero-title {
+      font-family: 'Fredoka', sans-serif; font-size: clamp(2.8rem, 7vw, 5.2rem);
+      font-weight: 700; line-height: 1.06; color: var(--deep); margin-bottom: 22px;
+      text-shadow: 0 2px 0 rgba(255,255,255,0.9);
+    }
+    .hero-title .gradient {
+      background: linear-gradient(135deg, var(--medium) 0%, var(--soft) 100%);
+      -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .hero-sub { font-size: 1.08rem; color: var(--txt-soft); line-height: 1.65; max-width: 500px; }
+    .hero-sub code {
+      font-family: 'SF Mono','Fira Code',monospace; font-size: 0.88em;
+      background: rgba(21,101,192,0.08); border: 1px solid rgba(21,101,192,0.15);
+      border-radius: 5px; padding: 1px 6px; color: var(--medium);
+    }
+    .hero-visual { width:260px; height:260px; position:relative; display:flex; align-items:center; justify-content:center; }
+    .hero-fallback {
+      font-size: 7rem; line-height: 1; user-select: none;
+      animation: hero-float 4s ease-in-out infinite;
+      filter: drop-shadow(0 12px 24px rgba(20,80,160,0.15));
+    }
+    .hero-lottie { position:absolute; inset:0; opacity:0; transition:opacity 0.4s; }
+    .hero-lottie.loaded { opacity: 1; }
+    @keyframes hero-float {
+      0%,100% { transform: translateY(0px) rotate(-2deg); }
+      50%      { transform: translateY(-18px) rotate(2deg); }
+    }
+    .filter-bar { padding: 0 0 28px; display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+    .filter-label { font-size:0.78rem; font-weight:700; text-transform:uppercase; letter-spacing:1.5px; color:var(--txt-faint); }
+    .filter-btn {
+      padding: 8px 20px; border-radius: var(--r-tag);
+      border: 2px solid rgba(21,101,192,0.18); background: var(--cloud-glass);
+      color: var(--txt-soft); font-family:'Inter',sans-serif; font-size:0.84rem; font-weight:600;
+      cursor: pointer; transition: all 0.2s ease; backdrop-filter: blur(10px);
+    }
+    .filter-btn:hover { border-color:var(--medium); color:var(--medium); transform:translateY(-2px); box-shadow:var(--shadow-sm); }
+    .filter-btn.active { background:var(--deep); color:white; border-color:var(--deep); box-shadow:0 4px 18px rgba(11,61,145,0.35); }
+    .count-label { font-size:0.82rem; color:var(--txt-faint); font-weight:500; padding-bottom:20px; display:block; }
+    .games-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(310px,1fr)); gap:22px; padding-bottom:80px; }
+    .game-card {
+      background: var(--cloud); border-radius: var(--r-card);
+      box-shadow: var(--shadow-md); border: 1.5px solid rgba(255,255,255,0.85);
+      overflow: hidden; display:flex; flex-direction:column; backdrop-filter:blur(12px);
+      transition: transform 0.28s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.28s ease;
+      position: relative;
+    }
+    .game-card:hover { transform: translateY(-8px) scale(1.01); box-shadow: var(--shadow-lg); }
+    .card-stripe { height:5px; background: linear-gradient(90deg, var(--stripe-color, var(--medium)) 0%, transparent 100%); }
+    .card-body { padding:22px 22px 16px; flex:1; display:flex; flex-direction:column; gap:10px; }
+    .card-emoji { font-size:2.6rem; line-height:1; filter:drop-shadow(0 2px 6px rgba(0,0,0,0.08)); }
+    .card-title { font-family:'Fredoka',sans-serif; font-size:1.38rem; font-weight:600; color:var(--txt); line-height:1.2; }
+    .card-desc { font-size:0.88rem; color:var(--txt-soft); line-height:1.65; flex:1; }
+    .card-tags { display:flex; flex-wrap:wrap; gap:6px; padding-top:2px; }
+    .tag {
+      font-size:0.70rem; font-weight:700; text-transform:uppercase; letter-spacing:0.7px;
+      padding:3px 9px; border-radius:14px;
+      background:rgba(21,101,192,0.09); color:var(--medium); border:1px solid rgba(21,101,192,0.14);
+    }
+    .tag-student { background:rgba(233,30,99,0.08); color:#b0003a; border-color:rgba(233,30,99,0.16); }
+    .notes-wrap { display:flex; flex-direction:column; gap:6px; }
+    .notes-btn {
+      background:none; border:none; cursor:pointer; font-family:'Inter',sans-serif;
+      font-size:0.78rem; font-weight:600; color:var(--txt-faint);
+      display:flex; align-items:center; gap:6px; padding:0; transition:color 0.15s;
+    }
+    .notes-btn:hover { color: var(--medium); }
+    .notes-arrow { display:inline-block; font-style:normal; font-size:0.65rem; transition:transform 0.2s ease; }
+    .notes-btn.open .notes-arrow { transform: rotate(90deg); }
+    .notes-body {
+      display:none; background:rgba(21,101,192,0.05);
+      border:1px solid rgba(21,101,192,0.12); border-radius:var(--r-sm);
+      padding:10px 14px; font-size:0.84rem; color:var(--txt-soft); line-height:1.6; font-style:italic;
+    }
+    .notes-body.open { display: block; }
+    .card-footer { padding:14px 22px 20px; border-top:1px solid rgba(21,101,192,0.07); }
+    .play-btn {
+      display:flex; align-items:center; justify-content:center; gap:10px;
+      width:100%; padding:12px 28px; background:var(--deep); color:white; border:none;
+      border-radius:var(--r-btn); font-family:'Fredoka',sans-serif; font-size:1.05rem; font-weight:600;
+      cursor:pointer; text-decoration:none; letter-spacing:0.4px;
+      transition: background 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+    }
+    .play-btn:hover { background:var(--medium); transform:translateY(-2px); box-shadow:0 8px 24px rgba(11,61,145,0.42); }
+    .play-btn:active { transform: translateY(0); }
+    .play-icon {
+      width:20px; height:20px; border-radius:50%; background:rgba(255,255,255,0.2);
+      display:inline-flex; align-items:center; justify-content:center; font-size:0.65rem; padding-left:2px;
+    }
+    @keyframes sparkle-out {
+      0%   { transform:scale(0) rotate(0deg);    opacity:1; }
+      100% { transform:scale(1.8) rotate(200deg); opacity:0; }
+    }
+    .sparkle { position:absolute; pointer-events:none; animation:sparkle-out 0.65s ease-out forwards; z-index:20; font-size:0.95rem; }
+    .state-block { grid-column:1/-1; text-align:center; padding:80px 24px; }
+    .state-emoji { font-size:4rem; display:block; margin-bottom:16px; animation:hero-float 3s ease-in-out infinite; }
+    .state-msg { font-size:1rem; color:var(--txt-faint); line-height:1.6; }
+    .loading-spinner {
+      width:32px; height:32px; border:3px solid rgba(21,101,192,0.12); border-top-color:var(--medium);
+      border-radius:50%; margin:20px auto 0; animation:spin 0.75s linear infinite;
+    }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    .lottie-corner { position:fixed; bottom:20px; right:20px; width:90px; height:90px; opacity:0.35; pointer-events:none; z-index:1; }
+    footer { padding:40px 0 48px; text-align:center; color:var(--txt-faint); font-size:0.84rem; border-top:1px solid rgba(21,101,192,0.08); }
+    footer p { line-height:1.7; }
+    footer code {
+      font-family:'SF Mono','Fira Code',monospace; font-size:0.88em;
+      background:rgba(21,101,192,0.07); border:1px solid rgba(21,101,192,0.12);
+      border-radius:5px; padding:1px 6px; color:var(--txt-soft);
+    }
+    @media (max-width:820px) {
+      .hero { grid-template-columns:1fr; padding-top:48px; }
+      .hero-visual { display:none; }
+      .hero-title { font-size:2.6rem; }
+      .games-grid { grid-template-columns:1fr; }
+      .lottie-corner { width:60px; height:60px; }
+    }
+    @media (max-width:480px) { .hero-title { font-size:2.1rem; } }
+  </style>
+</head>
+<body>
+
+<div class="cloud-layer" aria-hidden="true">
+  <div class="cloud-shape cl1"></div>
+  <div class="cloud-shape cl2"></div>
+  <div class="cloud-shape cl3"></div>
+  <div class="cloud-shape cl4"></div>
+  <div class="cloud-shape cl5"></div>
+</div>
+
+<!-- 🎨 LOTTIE SPOT A — corner floater. Swap src with any free .json from lottiefiles.com -->
+<lottie-player class="lottie-corner"
+  src="https://lottie.host/4db68bbd-31f6-4cd8-84eb-189de081159a/IGmMCqhzpt.json"
+  background="transparent" speed="0.7" loop autoplay>
+</lottie-player>
+
+<div class="page">
+  <nav>
+    <div class="nav-inner container">
+      <a href="#" class="nav-logo">
+        <div class="nav-pip"></div>
+        OZONE GAMES
+      </a>
+      <div class="nav-spacer"></div>
+      <span class="nav-count" id="nav-count" aria-live="polite"></span>
+    </div>
+  </nav>
+
+  <header class="container">
+    <div class="hero">
+      <div class="hero-text">
+        <div class="hero-eyebrow">Student Games Lab</div>
+        <h1 class="hero-title">Games built<br><span class="gradient">by students.</span></h1>
+        <p class="hero-sub">
+          Every game here was made by real kids learning to code.
+          To add a new game, drop the <code>.html</code> file into
+          <code>games/</code> and add one entry to <code>games.json</code>.
+        </p>
+      </div>
+      <!-- 🎨 LOTTIE SPOT B — hero animation. Swap src for clouds/rocket/gamepad from lottiefiles.com -->
+      <div class="hero-visual" aria-hidden="true">
+        <div class="hero-fallback" id="hero-fallback">🎮</div>
+        <lottie-player id="hero-lottie" class="hero-lottie"
+          src="https://lottie.host/4db68bbd-31f6-4cd8-84eb-189de081159a/IGmMCqhzpt.json"
+          background="transparent" speed="0.8" loop autoplay style="width:100%;height:100%">
+        </lottie-player>
+      </div>
+    </div>
+  </header>
+
+  <div class="container">
+    <div class="filter-bar" role="group" aria-label="Filter games">
+      <span class="filter-label">Show</span>
+      <button class="filter-btn active" data-filter="all">All Games</button>
+      <button class="filter-btn" data-filter="student">⭐ Student Made</button>
+      <button class="filter-btn" data-filter="teacher">Teacher Made</button>
+    </div>
+    <span class="count-label" id="count-label" aria-live="polite"></span>
+  </div>
+
+  <main class="container" id="games-section">
+    <div class="games-grid" id="games-grid" aria-label="Game list">
+      <div class="state-block">
+        <span class="state-emoji">☁️</span>
+        <p class="state-msg">Loading games…</p>
+        <div class="loading-spinner"></div>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <div class="container">
+      <!-- 🎨 LOTTIE SPOT C — footer decoration. Swap src from lottiefiles.com -->
+      <lottie-player
+        src="https://lottie.host/4db68bbd-31f6-4cd8-84eb-189de081159a/IGmMCqhzpt.json"
+        background="transparent" speed="1" loop autoplay
+        style="width:72px;height:72px;display:block;margin:0 auto 14px;opacity:0.5">
+      </lottie-player>
+      <p>Student games. No names. All skill.</p>
+      <p style="margin-top:8px;opacity:.7;font-size:.78rem">
+        Add a game: drop <code>.html</code> in <code>games/</code> → add entry to <code>games.json</code>
+      </p>
+    </div>
+  </footer>
+</div>
+
+<script>
+const COLORS = {
+  cyan:'#00bcd4', red:'#e53935', blue:'#1565c0', yellow:'#f9a825',
+  orange:'#ef6c00', green:'#2e7d32', pink:'#c2185b', purple:'#6a1b9a',
+};
+const SPARKLES = ['✦','⭐','✨','★','💫','🌟'];
+let allGames = [], currentFilter = 'all';
+
+document.addEventListener('DOMContentLoaded', () => {
+  setupFilters();
+  loadGames();
+  setupSparkles();
+  setupHeroLottie();
+});
+
+async function loadGames() {
+  try {
+    const res = await fetch('games.json');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    allGames = data.games || [];
+    if (data.site?.title) {
+      document.title = data.site.title + ' — Student Games';
+      document.querySelector('.nav-logo').lastChild.textContent = ' ' + data.site.title;
+    }
+    renderGames();
+  } catch (err) {
+    document.getElementById('games-grid').innerHTML = `
+      <div class="state-block">
+        <span class="state-emoji">🌧️</span>
+        <p class="state-msg">Couldn't load <code>games.json</code>.<br>
+        Serve from a web server — on GitHub Pages it works fine.</p>
+      </div>`;
+  }
+}
+
+function renderGames() {
+  const grid = document.getElementById('games-grid');
+  const filtered = allGames.filter(g => {
+    if (currentFilter === 'student') return g.madeByStudents === true;
+    if (currentFilter === 'teacher') return !g.madeByStudents;
+    return true;
+  });
+  const n = filtered.length;
+  const label = n === 0 ? '' : n + ' game' + (n !== 1 ? 's' : '');
+  document.getElementById('nav-count').textContent = label;
+  document.getElementById('count-label').textContent = n > 0 ? 'Showing ' + label : '';
+  if (n === 0) {
+    grid.innerHTML = '<div class="state-block"><span class="state-emoji">🌤️</span><p class="state-msg">No games in this category yet.</p></div>';
+    return;
+  }
+  grid.innerHTML = filtered.map(buildCard).join('');
+  grid.querySelectorAll('.notes-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const open = btn.classList.toggle('open');
+      btn.nextElementSibling.classList.toggle('open', open);
+      btn.setAttribute('aria-expanded', open);
+    });
+  });
+}
+
+function buildCard(game) {
+  const color = COLORS[game.accent] || COLORS.blue;
+  const badge = game.madeByStudents ? '<span class="tag tag-student">⭐ Student Made</span>' : '';
+  const tags  = (game.tags||[]).map(t=>'<span class="tag">'+h(t)+'</span>').join('');
+  const notes = game.notes ? `
+    <div class="notes-wrap">
+      <button class="notes-btn" aria-expanded="false"><span class="notes-arrow">▶</span> Teacher Notes</button>
+      <div class="notes-body">${h(game.notes)}</div>
+    </div>` : '';
+  return `
+    <article class="game-card" data-id="${h(game.id)}">
+      <div class="card-stripe" style="--stripe-color:${color}"></div>
+      <div class="card-body">
+        <div class="card-emoji">${game.emoji||'🎮'}</div>
+        <h2 class="card-title">${h(game.title)}</h2>
+        <p class="card-desc">${h(game.desc)}</p>
+        <div class="card-tags">${badge}${tags}</div>
+        ${notes}
+      </div>
+      <div class="card-footer">
+        <a class="play-btn" href="${h(game.file)}" target="_blank" rel="noopener noreferrer">
+          <span class="play-icon">▶</span> Play Game
+        </a>
+      </div>
+    </article>`;
+}
+
+function setupFilters() {
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentFilter = btn.dataset.filter;
+      renderGames();
+    });
+  });
+}
+
+function setupSparkles() {
+  let lastCard = null;
+  document.addEventListener('mousemove', e => {
+    const card = e.target.closest('.game-card');
+    if (!card || card === lastCard) return;
+    lastCard = card;
+    const s = document.createElement('span');
+    s.className = 'sparkle';
+    s.setAttribute('aria-hidden','true');
+    s.textContent = SPARKLES[Math.floor(Math.random()*SPARKLES.length)];
+    const rect = card.getBoundingClientRect();
+    s.style.left = (e.clientX - rect.left) + 'px';
+    s.style.top  = (e.clientY - rect.top)  + 'px';
+    card.appendChild(s);
+    setTimeout(() => { s.remove(); lastCard = null; }, 700);
+  });
+}
+
+function setupHeroLottie() {
+  const lottie = document.getElementById('hero-lottie');
+  const fallback = document.getElementById('hero-fallback');
+  if (!lottie) return;
+  lottie.addEventListener('ready', () => {
+    lottie.classList.add('loaded');
+    if (fallback) fallback.style.opacity = '0';
+  });
+  setTimeout(() => {
+    if (!lottie.classList.contains('loaded')) lottie.style.display = 'none';
+  }, 3000);
+}
+
+function h(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+</script>
+</body>
+</html>

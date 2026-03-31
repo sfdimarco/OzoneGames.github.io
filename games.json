@@ -1,0 +1,156 @@
+{
+  "_readme": "OZONE GAMES — EASY EDIT PIPELINE. To add a game: 1) Drop the .html file in games/  2) Add an entry below  3) Push to GitHub. That's it.",
+
+  "site": {
+    "title": "OZONE GAMES",
+    "tagline": "Games built by students."
+  },
+
+  "games": [
+
+    {
+      "id": "bigbackattack",
+      "title": "Big Back Attack",
+      "emoji": "🍕",
+      "desc": "A breakout game with food-themed power-ups, multi-ball mechanics, and a live leaderboard.",
+      "file": "games/bigbackattack.html",
+      "accent": "orange",
+      "madeByStudents": true,
+      "tags": ["Breakout", "Power-ups", "Leaderboard"],
+      "notes": "Students named it, balanced the difficulty, and kept iterating until it felt right. The food theming was 100% their idea — they spent a whole session just debating the power-ups."
+    },
+
+    {
+      "id": "chaoslands",
+      "title": "Chaos Lands: Corruption",
+      "emoji": "🏃",
+      "desc": "A wave runner with Nightmare Mode, particle explosions, and a live leaderboard.",
+      "file": "games/chaoslands.html",
+      "accent": "red",
+      "madeByStudents": true,
+      "tags": ["Runner", "Nightmare Mode", "Leaderboard"],
+      "notes": "They wrote the lore, invented the corruption mechanic, and pushed hard for competitive scoring. The Nightmare Mode difficulty curve was all student design."
+    },
+
+    {
+      "id": "catcaretaker",
+      "title": "Cat Caretaker: Nightmare Mansion",
+      "emoji": "🐱",
+      "desc": "A first-person raycasting game where you navigate a mansion full of cats with moods.",
+      "file": "games/catcaretaker.html",
+      "accent": "pink",
+      "madeByStudents": true,
+      "tags": ["Raycasting", "Horror", "First Person"],
+      "notes": "Students designed the room layouts, the cat anger system, and the jump scare ending. The horror concept was entirely theirs — I introduced raycasting, they decided it should be scary."
+    },
+
+    {
+      "id": "ginrummy",
+      "title": "Gin Rummy",
+      "emoji": "🃏",
+      "desc": "A complete card game with meld detection, deadwood scoring, and an AI opponent.",
+      "file": "games/ginrummy.html",
+      "accent": "green",
+      "madeByStudents": true,
+      "tags": ["Card Game", "AI Opponent", "Logic"],
+      "notes": "Writing the AI was the moment several students understood what an algorithm actually is. One student said 'oh, it's just a list of if-statements that are really good.' Exactly."
+    },
+
+    {
+      "id": "mylesclicker",
+      "title": "The Clicker",
+      "emoji": "🖱️",
+      "desc": "An incremental clicker — built because a student asked nicely and wouldn't drop it.",
+      "file": "games/mylesclicker.html",
+      "accent": "cyan",
+      "madeByStudents": true,
+      "tags": ["Clicker", "Incremental", "Math"],
+      "notes": "Simple incremental mechanics with a quiet lesson in exponential growth built in. A student asked 'why does it get faster so fast?' and we spent 20 minutes on graphs. Best class of the month."
+    },
+
+    {
+      "id": "watergunpractice",
+      "title": "Water Gun Target Practice",
+      "emoji": "💦",
+      "desc": "Moving targets, water mechanics, and a full upgrade shop — economy designed by students.",
+      "file": "games/watergunpractice.html",
+      "accent": "blue",
+      "madeByStudents": true,
+      "tags": ["Shooter", "Upgrade Shop", "Economy"],
+      "notes": "Students helped design the in-game economy: what upgrades cost, which are worth buying, how to balance power vs. price. A natural entry into game design thinking."
+    },
+
+    {
+      "id": "bankheist",
+      "title": "Bank Heist Mission",
+      "emoji": "🏦",
+      "desc": "Tile-based stealth — navigate a grid to reach a moving vault before the guard catches you.",
+      "file": "games/bankheist.html",
+      "accent": "yellow",
+      "madeByStudents": false,
+      "tags": ["Stealth", "Grid Puzzle", "Spatial"],
+      "notes": "Great for spatial reasoning. Students love the moving vault — it makes simple grid navigation feel like a real problem to solve. Add a timer to increase pressure."
+    },
+
+    {
+      "id": "connect4kirby",
+      "title": "Connect 4 — Kirby Edition",
+      "emoji": "🌸",
+      "desc": "Classic Connect 4 with Kirby & Among Us themes and three adjustable AI difficulty levels.",
+      "file": "games/connect4kirby.html",
+      "accent": "purple",
+      "madeByStudents": false,
+      "tags": ["Strategy", "AI Opponent", "Classic"],
+      "notes": "The three difficulty levels open up a real conversation about what the computer is 'thinking' — a quiet intro to decision trees. Ask students: what changed between easy and hard?"
+    },
+
+    {
+      "id": "binarylife",
+      "title": "Base 2: Game of Life",
+      "emoji": "🧬",
+      "desc": "Conway's Game of Life displayed as binary digits. Flip cells between 0 and 1 and watch the rules play out.",
+      "file": "games/binarylife.html",
+      "accent": "blue",
+      "madeByStudents": false,
+      "tags": ["Conway", "Binary", "Freeform Draw"],
+      "notes": "Built for 3rd and 4th graders — big cells, friendly labels, draw mode for freehand patterns. Good opener: ask students to predict what their pattern will do before pressing play."
+    },
+
+    {
+      "id": "diceroller",
+      "title": "Dice Roller Deluxe",
+      "emoji": "🎲",
+      "desc": "Every die you need — D4 through D20. Roll multiple dice at once.",
+      "file": "games/diceroller.html",
+      "accent": "red",
+      "madeByStudents": false,
+      "tags": ["Probability", "Tabletop", "Math Tool"],
+      "notes": "One of the most-used things in the room. Tabletop days, math lessons, any time a student wants to leave something to chance. Pairs well with a quick lesson on probability distributions."
+    },
+
+    {
+      "id": "geocatdash",
+      "title": "Geo Cat Dash",
+      "emoji": "😸",
+      "desc": "Geometry Dash-style runner. A cat, an obstacle course, one button. Survive as long as you can.",
+      "file": "games/geocatdash.html",
+      "accent": "orange",
+      "madeByStudents": false,
+      "tags": ["Runner", "One Button", "Timing"],
+      "notes": "An accessible entry into canvas animation — simple mechanic, timing that's unforgiving in the right way. Students who beat it are genuinely proud. Good gateway into building their own runner."
+    },
+
+    {
+      "id": "milkfactory",
+      "title": "Milk Carton Factory",
+      "emoji": "🥛",
+      "desc": "Factory simulation — manage inputs, watch for bottlenecks, and optimize throughput.",
+      "file": "games/milkfactory.html",
+      "accent": "cyan",
+      "madeByStudents": false,
+      "tags": ["Simulation", "Systems Thinking", "Factory"],
+      "notes": "Students find it funny, which makes the systems thinking stick. Ask: 'where is the bottleneck?' before they start optimizing. The absurdity of milk cartons makes the concept less threatening."
+    }
+
+  ]
+}
