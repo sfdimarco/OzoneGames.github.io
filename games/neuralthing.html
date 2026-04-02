@@ -1,0 +1,1239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+    <title>Neural Evolution Sandbox</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { overflow: hidden; font-family: 'Segoe UI', Arial, sans-serif; }
+        canvas { display: block; }
+        
+        #ui {
+            position: absolute; top: 10px; left: 10px;
+            background: rgba(0,0,0,0.75); color: white;
+            padding: 15px; border-radius: 10px;
+            font-size: 14px; max-width: 320px; user-select: none;
+        }
+        #ui h2 { margin-bottom: 10px; font-size: 18px; color: #4fc3f7; }
+        #ui .stat { display: flex; justify-content: space-between; margin: 5px 0; }
+        #ui .stat-label { color: #aaa; }
+        #ui .stat-value { color: #4fc3f7; font-weight: bold; }
+        
+        #controls {
+            position: absolute; bottom: 10px; left: 10px;
+            display: flex; flex-wrap: wrap; gap: 8px;
+        }
+        button {
+            background: linear-gradient(145deg, #1976d2, #1565c0);
+            color: white; border: none; padding: 12px 20px;
+            border-radius: 8px; font-size: 14px; font-weight: bold;
+            cursor: pointer; touch-action: manipulation;
+        }
+        button:hover { background: linear-gradient(145deg, #1e88e5, #1976d2); }
+        button:active { transform: scale(0.95); }
+        button.danger { background: linear-gradient(145deg, #d32f2f, #c62828); }
+        button.success { background: linear-gradient(145deg, #388e3c, #2e7d32); }
+        button.warning { background: linear-gradient(145deg, #f57c00, #ef6c00); }
+        button.active { box-shadow: 0 0 10px #fff; }
+        
+        #creature-info {
+            position: absolute; top: 10px; right: 10px;
+            background: rgba(0,0,0,0.75); color: white;
+            padding: 15px; border-radius: 10px;
+            font-size: 13px; max-width: 300px; display: none;
+        }
+        #creature-info h3 { color: #81c784; margin-bottom: 8px; }
+        #creature-info .trait { display: flex; justify-content: space-between; margin: 3px 0; }
+        
+        #generation-display {
+            position: absolute; bottom: 10px; right: 10px;
+            background: rgba(0,0,0,0.75); color: white;
+            padding: 15px; border-radius: 10px; font-size: 13px;
+        }
+        #generation-display h3 { color: #ffb74d; margin-bottom: 8px; }
+        
+        .slider-container { margin: 10px 0; }
+        .slider-container label { display: block; margin-bottom: 5px; color: #aaa; }
+        input[type="range"] { width: 100%; }
+        
+        #breed-mode {
+            position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.9); color: white;
+            padding: 30px; border-radius: 15px;
+            text-align: center; display: none; z-index: 100;
+        }
+        #breed-mode h2 { color: #f48fb1; margin-bottom: 15px; }
+        #breed-mode p { margin-bottom: 20px; color: #ccc; }
+        
+        #camera-help {
+            position: absolute; bottom: 80px; right: 10px;
+            background: rgba(0,0,0,0.6); color: #aaa;
+            padding: 10px; border-radius: 8px;
+            font-size: 11px; text-align: center;
+        }
+        
+        #creature-info .brain-weights {
+            margin-top: 10px; padding-top: 10px; border-top: 1px solid #444;
+        }
+        #creature-info .brain-weights h4 { color: #ba68c8; font-size: 12px; margin-bottom: 5px; }
+        .weight-bar { display: flex; align-items: center; margin: 2px 0; font-size: 10px; }
+        .weight-bar label { width: 50px; color: #888; }
+        .weight-bar .bar { flex: 1; height: 6px; background: #333; border-radius: 3px; overflow: hidden; }
+        .weight-bar .fill { height: 100%; background: linear-gradient(90deg, #ef5350, #42a5f5, #66bb6a); }
+        .weight-bar .value { width: 35px; text-align: right; color: #4fc3f7; }
+        
+        #notifications {
+            position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none; z-index: 200;
+        }
+        .notification {
+            background: rgba(76, 175, 80, 0.9);
+            color: white; padding: 10px 20px;
+            border-radius: 8px; margin: 5px;
+            animation: fadeOut 2s forwards;
+        }
+        @keyframes fadeOut {
+            0% { opacity: 1; transform: scale(1); }
+            100% { opacity: 0; transform: scale(0.8); }
+        }
+    </style>
+</head>
+<body>
+    <div id="ui">
+        <h2>🧬 Neural Evolution</h2>
+        <div class="stat"><span class="stat-label">Creatures:</span><span class="stat-value" id="creature-count">0</span></div>
+        <div class="stat"><span class="stat-label">Generation:</span><span class="stat-value" id="generation">1</span></div>
+        <div class="stat"><span class="stat-label">Best Fitness:</span><span class="stat-value" id="best-fitness">0</span></div>
+        <div class="stat"><span class="stat-label">Time:</span><span class="stat-value" id="time">0s</span></div>
+        <div class="slider-container">
+            <label>Simulation Speed: <span id="speed-value">1x</span></label>
+            <input type="range" id="speed-slider" min="1" max="5" value="1">
+        </div>
+    </div>
+    
+    <div id="controls">
+        <button onclick="spawnCreature()">➕ Spawn</button>
+        <button onclick="startBreedMode()" class="success">💕 Breed</button>
+        <button onclick="shakeTrees()" class="warning">🌲 Shake Trees</button>
+        <button onclick="resetWorld()" class="danger">🔄 Reset</button>
+        <button onclick="toggleAutoEvolve()" id="auto-btn" class="warning">🤖 Auto: OFF</button>
+    </div>
+    
+    <div id="creature-info">
+        <h3>🦠 Creature Info</h3>
+        <div class="trait"><span>Type:</span><span id="c-type">-</span></div>
+        <div class="trait"><span>Legs:</span><span id="c-legs">-</span></div>
+        <div class="trait"><span>Fitness:</span><span id="c-fitness">-</span></div>
+        <div class="trait"><span>Age:</span><span id="c-age">-</span></div>
+        <div class="trait"><span>Gen:</span><span id="c-gen">-</span></div>
+        <div class="trait"><span>Speed:</span><span id="c-speed">-</span></div>
+        <div class="trait"><span>Distance:</span><span id="c-distance">-</span></div>
+        <div class="trait"><span>Status:</span><span id="c-status">-</span></div>
+        <div class="trait"><span>Fruit Eaten:</span><span id="c-fruit">0</span></div>
+        <div class="brain-weights">
+            <h4>🧠 Neural Activity</h4>
+            <div class="weight-bar"><label>Drive</label><div class="bar"><div class="fill" id="brain-0"></div></div><span class="value" id="brain-0-val">0.50</span></div>
+            <div class="weight-bar"><label>Rhythm</label><div class="bar"><div class="fill" id="brain-1"></div></div><span class="value" id="brain-1-val">0.50</span></div>
+            <div class="weight-bar"><label>Balance</label><div class="bar"><div class="fill" id="brain-2"></div></div><span class="value" id="brain-2-val">0.50</span></div>
+            <div class="weight-bar"><label>Stability</label><div class="bar"><div class="fill" id="brain-3"></div></div><span class="value" id="brain-3-val">0.50</span></div>
+        </div>
+    </div>
+    
+    <div id="generation-display">
+        <h3>📊 Evolution Stats</h3>
+        <div class="stat"><span class="stat-label">Avg Fitness:</span><span class="stat-value" id="avg-fitness">0</span></div>
+        <div class="stat"><span class="stat-label">Max Distance:</span><span class="stat-value" id="max-dist">0</span></div>
+        <div class="stat"><span class="stat-label">Alive:</span><span class="stat-value" id="alive-count">0</span></div>
+        <div class="stat"><span class="stat-label">Fruit:</span><span class="stat-value" id="fruit-count">0</span></div>
+    </div>
+    
+    <div id="camera-help">📷 Drag: rotate | Scroll: zoom | Right-drag: pan</div>
+    
+    <div id="breed-mode">
+        <h2>💕 Select Two Parents</h2>
+        <p>Tap two creatures to breed!</p>
+        <p id="breed-status">Selected: 0/2</p>
+        <button onclick="cancelBreedMode()" class="danger">Cancel</button>
+    </div>
+    
+    <div id="notifications"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // ============================================
+        // SEEDED PRNG
+        // ============================================
+        class PRNG {
+            constructor(seed) { this.seed = seed | 0; }
+            next() {
+                this.seed = (this.seed * 1103515245 + 12345) & 0x7fffffff;
+                return this.seed / 0x7fffffff;
+            }
+            range(min, max) { return min + this.next() * (max - min); }
+            int(min, max) { return Math.floor(this.range(min, max + 1)); }
+        }
+
+        // ============================================
+        // NEURAL NETWORK
+        // ============================================
+        class NeuralNetwork {
+            constructor(inputSize, hiddenSize, outputSize, prng) {
+                this.inputSize = inputSize;
+                this.hiddenSize = hiddenSize;
+                this.outputSize = outputSize;
+                this.prng = prng;
+                
+                this.weights1 = Array.from({length: inputSize * hiddenSize}, () => prng.next() * 2 - 1);
+                this.weights2 = Array.from({length: hiddenSize * outputSize}, () => prng.next() * 2 - 1);
+                this.bias1 = Array.from({length: hiddenSize}, () => prng.next() * 2 - 1);
+                this.bias2 = Array.from({length: outputSize}, () => prng.next() * 2 - 1);
+            }
+            
+            sigmoid(x) { return 1 / (1 + Math.exp(-Math.max(-500, Math.min(500, x)))); }
+            
+            forward(inputs) {
+                const hidden = this.bias1.map((b, i) => 
+                    this.sigmoid(b + inputs.reduce((s, v, j) => s + v * this.weights1[i * this.inputSize + j], 0))
+                );
+                return this.bias2.map((b, i) => 
+                    this.sigmoid(b + hidden.reduce((s, v, j) => s + v * this.weights2[i * this.hiddenSize + j], 0))
+                );
+            }
+            
+            crossover(other) {
+                const child = new NeuralNetwork(this.inputSize, this.hiddenSize, this.outputSize, this.prng);
+                const pick = (a, b) => this.prng.next() < 0.5 ? a : b;
+                child.weights1 = this.weights1.map((v, i) => pick(v, other.weights1[i]));
+                child.weights2 = this.weights2.map((v, i) => pick(v, other.weights2[i]));
+                child.bias1 = this.bias1.map((v, i) => pick(v, other.bias1[i]));
+                child.bias2 = this.bias2.map((v, i) => pick(v, other.bias2[i]));
+                return child;
+            }
+            
+            mutate(rate) {
+                const mut = (v) => this.prng.next() < rate ? v + (this.prng.next() * 2 - 1) * 0.5 : v;
+                this.weights1 = this.weights1.map(mut);
+                this.weights2 = this.weights2.map(mut);
+                this.bias1 = this.bias1.map(mut);
+                this.bias2 = this.bias2.map(mut);
+            }
+        }
+
+        // ============================================
+        // FALLING FRUIT
+        // ============================================
+        class FallingFruit {
+            constructor(scene, x, y, z, prng) {
+                this.scene = scene;
+                this.prng = prng;
+                this.position = new THREE.Vector3(x, y, z);
+                this.velocity = new THREE.Vector3(0, 0, 0);
+                this.radius = 0.08;
+                this.onGround = false;
+                this.lifetime = 0;
+                this.maxLifetime = 30 + prng.next() * 20;
+                
+                this.mesh = new THREE.Mesh(
+                    new THREE.SphereGeometry(this.radius, 8, 8),
+                    new THREE.MeshBasicMaterial({ color: 0xff4444 })
+                );
+                this.mesh.position.copy(this.position);
+                this.mesh.castShadow = true;
+                scene.add(this.mesh);
+            }
+            
+            update(dt, world) {
+                this.lifetime += dt;
+                
+                if (!this.onGround) {
+                    this.velocity.y -= 15 * dt;
+                    this.position.addScaledVector(this.velocity, dt);
+                    
+                    if (this.position.y <= this.radius) {
+                        this.position.y = this.radius;
+                        this.velocity.y = 0;
+                        this.onGround = true;
+                        this.velocity.x *= 0.3;
+                        this.velocity.z *= 0.3;
+                    }
+                }
+                
+                if (this.onGround) {
+                    this.velocity.x *= 0.95;
+                    this.velocity.z *= 0.95;
+                    this.position.addScaledVector(this.velocity, dt);
+                }
+                
+                this.mesh.position.copy(this.position);
+                this.mesh.rotation.x += this.velocity.z * 0.5;
+                this.mesh.rotation.z -= this.velocity.x * 0.5;
+                
+                return this.lifetime < this.maxLifetime;
+            }
+            
+            checkCollision(pos, radius) {
+                return this.position.distanceTo(pos) < (this.radius + radius);
+            }
+            
+            dispose() {
+                this.scene.remove(this.mesh);
+            }
+        }
+
+        // ============================================
+        // IMPROVED FRACTAL TREE
+        // ============================================
+        class FractalTree {
+            constructor(scene, x, z, prng) {
+                this.scene = scene;
+                this.prng = prng;
+                this.baseX = x;
+                this.baseZ = z;
+                this.group = new THREE.Group();
+                this.group.position.set(x, 0, z);
+                this.fruitNodes = [];
+                this.trunkMeshes = [];
+                
+                // Tree variation
+                this.trunkHeight = 0.8 + prng.next() * 0.6;
+                this.trunkWidth = 0.12 + prng.next() * 0.08;
+                this.branches = prng.int(3, 5);
+                this.leafColor = new THREE.Color().setHSL(prng.range(0.25, 0.35), 0.6, 0.35);
+                
+                this.createTree(0, 0, 0, 1, 0);
+                scene.add(this.group);
+            }
+            
+            createTree(x, y, z, scale, depth) {
+                const maxDepth = 4;
+                
+                // Trunk/branch
+                const height = (depth === 0 ? this.trunkHeight : 0.35) * scale;
+                const radius = (depth === 0 ? this.trunkWidth : 0.04) * scale;
+                
+                // Slight curve for natural look
+                const curveX = (this.prng.next() - 0.5) * 0.15 * depth;
+                const curveZ = (this.prng.next() - 0.5) * 0.15 * depth;
+                
+                const trunk = new THREE.Mesh(
+                    new THREE.CylinderGeometry(radius * 0.7, radius, height, 8),
+                    new THREE.MeshLambertMaterial({ 
+                        color: depth === 0 ? 0x4a3728 : 0x5d4a3a 
+                    })
+                );
+                trunk.position.set(x + curveX, y + height / 2, z + curveZ);
+                trunk.castShadow = true;
+                trunk.receiveShadow = true;
+                this.group.add(trunk);
+                this.trunkMeshes.push(trunk);
+                
+                // Leaves at top branches
+                if (depth === maxDepth - 1) {
+                    this.addLeaves(x + curveX, y + height, z + curveZ, scale);
+                }
+                
+                if (depth >= maxDepth) {
+                    return;
+                }
+                
+                // Branch distribution
+                const branchCount = depth === 0 ? this.branches : this.prng.int(2, 3);
+                const spread = 0.4 + this.prng.next() * 0.2;
+                
+                for (let i = 0; i < branchCount; i++) {
+                    const angle = (i / branchCount) * Math.PI * 2 + this.prng.next() * 0.3;
+                    const upAngle = 0.4 + this.prng.next() * 0.3;
+                    
+                    const newX = x + curveX + Math.sin(angle) * Math.cos(upAngle) * spread * height;
+                    const newY = y + height * 0.65;
+                    const newZ = z + curveZ + Math.cos(angle) * Math.cos(upAngle) * spread * height;
+                    
+                    this.createTree(newX, newY, newZ, scale * 0.7, depth + 1);
+                }
+            }
+            
+            addLeaves(x, y, z, scale) {
+                const leafSize = 0.25 * scale;
+                
+                // Cluster of leaves
+                const leafCount = this.prng.int(3, 6);
+                for (let i = 0; i < leafCount; i++) {
+                    const lx = x + (this.prng.next() - 0.5) * leafSize;
+                    const ly = y + (this.prng.next() - 0.5) * leafSize * 0.5;
+                    const lz = z + (this.prng.next() - 0.5) * leafSize;
+                    
+                    const leaf = new THREE.Mesh(
+                        new THREE.DodecahedronGeometry(leafSize * 0.8, 0),
+                        new THREE.MeshLambertMaterial({ 
+                            color: this.leafColor,
+                            flatShading: true
+                        })
+                    );
+                    leaf.position.set(lx, ly, lz);
+                    leaf.castShadow = true;
+                    this.group.add(leaf);
+                    
+                    // Fruit on some leaves
+                    if (this.prng.next() < 0.6) {
+                        this.fruitNodes.push({
+                            position: new THREE.Vector3(lx, ly + leafSize * 0.5, lz),
+                            onTree: true
+                        });
+                    }
+                }
+            }
+            
+            shake() {
+                const dropped = [];
+                for (const node of this.fruitNodes) {
+                    if (node.onTree && this.prng.next() < 0.7) {
+                        node.onTree = false;
+                        const worldPos = node.position.clone().applyMatrix4(this.group.matrixWorld);
+                        dropped.push(worldPos);
+                    }
+                }
+                return dropped;
+            }
+            
+            getTreeFruitCount() {
+                return this.fruitNodes.filter(n => n.onTree).length;
+            }
+            
+            dispose() { this.scene.remove(this.group); }
+        }
+
+        // ============================================
+        // VOXEL BLOCK
+        // ============================================
+        class VoxelBlock {
+            constructor(scene, x, y, z, size, color, prng) {
+                this.scene = scene;
+                this.size = size;
+                this.position = new THREE.Vector3(x, y, z);
+                
+                const variance = prng.next() * 0.1 - 0.05;
+                const r = Math.max(0, Math.min(1, ((color >> 16) & 0xff) / 255 + variance));
+                const g = Math.max(0, Math.min(1, ((color >> 8) & 0xff) / 255 + variance));
+                const b = Math.max(0, Math.min(1, (color & 0xff) / 255 + variance));
+                
+                this.mesh = new THREE.Mesh(
+                    new THREE.BoxGeometry(size, size, size),
+                    new THREE.MeshLambertMaterial({ color: new THREE.Color(r, g, b) })
+                );
+                this.mesh.position.copy(this.position);
+                this.mesh.castShadow = true;
+                this.mesh.receiveShadow = true;
+                scene.add(this.mesh);
+                
+                this.bounds = {
+                    minX: x - size/2, maxX: x + size/2,
+                    minY: y - size/2, maxY: y + size/2,
+                    minZ: z - size/2, maxZ: z + size/2
+                };
+            }
+            
+            checkCollision(pos, radius) {
+                const closestX = Math.max(this.bounds.minX, Math.min(pos.x, this.bounds.maxX));
+                const closestZ = Math.max(this.bounds.minZ, Math.min(pos.z, this.bounds.maxZ));
+                const dx = pos.x - closestX;
+                const dz = pos.z - closestZ;
+                return (dx * dx + dz * dz) < (radius * radius);
+            }
+            
+            getHeightAt(x, z) {
+                if (x >= this.bounds.minX && x <= this.bounds.maxX &&
+                    z >= this.bounds.minZ && z <= this.bounds.maxZ) {
+                    return this.bounds.maxY;
+                }
+                return -1000;
+            }
+            
+            dispose() { this.scene.remove(this.mesh); }
+        }
+
+        // ============================================
+        // CREATURE
+        // ============================================
+        class Creature {
+            constructor(scene, type, generation, parents, prng) {
+                this.scene = scene;
+                this.prng = prng;
+                this.type = type || (prng.next() < 0.5 ? 'biped' : 'quad');
+                this.generation = generation;
+                this.parents = parents;
+                this.age = 0;
+                this.fitness = 0;
+                this.fruitEaten = 0;
+                this.startPos = new THREE.Vector3();
+                this.alive = true;
+                this.selected = false;
+                this.velocity = new THREE.Vector3();
+                this.angularVel = 0;
+                this.onGround = true;
+                
+                this.brain = new NeuralNetwork(12, 20, 16, prng);
+                if (parents) {
+                    this.brain = parents[0].brain.crossover(parents[1].brain);
+                    this.brain.mutate(0.12);
+                }
+                
+                this.createBody();
+            }
+            
+            createBody() {
+                this.group = new THREE.Group();
+                this.color = Math.floor(this.prng.next() * 0xffffff);
+                this.bodyScale = 0.85 + this.prng.next() * 0.3;
+                
+                this.body = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.4 * this.bodyScale, 0.35 * this.bodyScale, 0.65 * this.bodyScale),
+                    new THREE.MeshLambertMaterial({ color: this.color })
+                );
+                this.body.position.y = 0.35;
+                this.body.castShadow = true;
+                this.group.add(this.body);
+                
+                this.bounds = { radius: 0.35 * this.bodyScale, height: 0.5 };
+                
+                const head = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.28, 0.28, 0.35),
+                    new THREE.MeshLambertMaterial({ color: this.color })
+                );
+                head.position.set(0, 0.75, 0.45);
+                head.castShadow = true;
+                this.group.add(head);
+                
+                const eyeGeo = new THREE.SphereGeometry(0.05, 8, 8);
+                const eyeMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+                const pupilMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+                
+                [-0.09, 0.09].forEach(x => {
+                    const eye = new THREE.Mesh(eyeGeo, eyeMat);
+                    eye.position.set(x, 0.78, 0.62);
+                    this.group.add(eye);
+                    const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.025, 8, 8), pupilMat);
+                    pupil.position.set(0, 0, 0.035);
+                    eye.add(pupil);
+                });
+                
+                this.limbs = [];
+                const limbCount = this.type === 'biped' ? 2 : 4;
+                for (let i = 0; i < limbCount; i++) {
+                    const angle = (i / limbCount) * Math.PI * 2;
+                    const lx = Math.sin(angle) * 0.22;
+                    const lz = Math.cos(angle) * 0.28;
+                    
+                    const upperLen = 0.22 + this.prng.next() * 0.08;
+                    const lowerLen = 0.22 + this.prng.next() * 0.08;
+                    
+                    const jointMat = new THREE.MeshLambertMaterial({ color: 0x333333 });
+                    const limbMat = new THREE.MeshLambertMaterial({ color: this.color });
+                    
+                    const upperJoint = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 8), jointMat);
+                    upperJoint.position.set(lx, 0.25, lz);
+                    this.group.add(upperJoint);
+                    
+                    const upperLimb = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, upperLen, 8), limbMat);
+                    upperLimb.position.set(lx, 0.25 - upperLen/2, lz);
+                    upperLimb.castShadow = true;
+                    this.group.add(upperLimb);
+                    
+                    const lowerJoint = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 8), jointMat);
+                    lowerJoint.position.set(lx, 0.25 - upperLen, lz);
+                    this.group.add(lowerJoint);
+                    
+                    const lowerLimb = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.028, lowerLen, 8), limbMat);
+                    lowerLimb.position.set(lx, 0.25 - upperLen - lowerLen/2, lz);
+                    lowerLimb.castShadow = true;
+                    this.group.add(lowerLimb);
+                    
+                    const foot = new THREE.Mesh(
+                        new THREE.BoxGeometry(0.1, 0.05, 0.14),
+                        new THREE.MeshLambertMaterial({ color: 0x444444 })
+                    );
+                    foot.position.set(lx, 0.25 - upperLen - lowerLen - 0.05, lz + 0.04);
+                    foot.castShadow = true;
+                    this.group.add(foot);
+                    
+                    this.limbs.push({
+                        upperJoint, lowerJoint, upperLimb, lowerLimb, foot,
+                        baseAngle: angle, phase: this.prng.next() * Math.PI * 2,
+                        targetUpper: 0, targetLower: 0
+                    });
+                }
+                
+                this.scene.add(this.group);
+                this.startPos.copy(this.group.position);
+            }
+            
+            update(dt, time, world) {
+                if (!this.alive) return;
+                this.age += dt;
+                
+                const inputs = [
+                    Math.sin(time * 0.5), Math.cos(time * 0.5),
+                    this.group.rotation.z * 0.4 + 0.5,
+                    this.group.rotation.x * 0.4 + 0.5,
+                    this.velocity.length() * 0.3,
+                    this.angularVel * 0.5 + 0.5,
+                    this.onGround ? 1 : 0,
+                    ...this.limbs.slice(0, 5).map(l => l.upperJoint.rotation.x * 0.4 + 0.5)
+                ];
+                
+                const outputs = this.brain.forward(inputs);
+                
+                for (let i = 0; i < this.limbs.length; i++) {
+                    const limb = this.limbs[i];
+                    limb.targetUpper = (outputs[i * 2] - 0.5) * 2.5;
+                    limb.targetLower = (outputs[i * 2 + 1] - 0.5) * 2;
+                    limb.upperJoint.rotation.x += (limb.targetUpper - limb.upperJoint.rotation.x) * 0.2;
+                    limb.lowerJoint.rotation.x += (limb.targetLower - limb.lowerJoint.rotation.x) * 0.2;
+                    limb.upperJoint.rotation.x += Math.sin(time * 8 + limb.phase) * outputs[i * 2] * 0.5;
+                }
+                
+                const forwardOut = outputs[12] || 0.5;
+                const turnOut = outputs[13] || 0.5;
+                const moveForce = (forwardOut - 0.4) * 8;
+                const turnForce = (turnOut - 0.5) * 6;
+                
+                const forward = new THREE.Vector3(0, 0, 1).applyAxisAngle(new THREE.Vector3(0, 1, 0), this.group.rotation.y);
+                this.velocity.addScaledVector(forward, moveForce * dt);
+                this.angularVel += turnForce * dt;
+                
+                this.group.rotation.y += this.angularVel * dt;
+                this.angularVel *= 0.85;
+                
+                let groundY = 0;
+                for (const block of world.blocks) {
+                    const h = block.getHeightAt(this.group.position.x, this.group.position.z);
+                    if (h > groundY) groundY = h;
+                }
+                
+                const footY = this.group.position.y;
+                const targetY = groundY + 0.15;
+                
+                if (footY > targetY) {
+                    this.velocity.y -= 25 * dt;
+                    this.onGround = false;
+                } else {
+                    this.velocity.y = 0;
+                    this.group.position.y = targetY;
+                    this.onGround = true;
+                }
+                
+                this.group.position.x += this.velocity.x * dt;
+                this.group.position.z += this.velocity.z * dt;
+                
+                if (this.onGround) {
+                    this.velocity.x *= 0.88;
+                    this.velocity.z *= 0.88;
+                }
+                
+                for (const block of world.blocks) {
+                    if (block.checkCollision(this.group.position, this.bounds.radius)) {
+                        const toBlock = this.group.position.clone().sub(block.position).normalize();
+                        this.group.position.addScaledVector(toBlock, 0.15);
+                        this.velocity.multiplyScalar(0.4);
+                    }
+                }
+                
+                for (let i = world.fruit.length - 1; i >= 0; i--) {
+                    const fruit = world.fruit[i];
+                    if (fruit.checkCollision(this.group.position, this.bounds.radius * 1.5)) {
+                        this.fruitEaten++;
+                        this.fitness += 10;
+                        this.body.material.emissive.setHex(0x336633);
+                        setTimeout(() => { this.body.material.emissive.setHex(0x000000); }, 150);
+                        fruit.dispose();
+                        world.fruit.splice(i, 1);
+                    }
+                }
+                
+                this.body.position.y = 0.35 + Math.sin(time * 10) * 0.02 * this.bodyScale;
+                this.group.rotation.x *= 0.85;
+                this.group.rotation.z *= 0.85;
+                
+                const dx = this.group.position.x - this.startPos.x;
+                const dz = this.group.position.z - this.startPos.z;
+                this.fitness = Math.sqrt(dx*dx + dz*dz) + this.age * 0.15;
+                
+                if (Math.abs(this.group.rotation.x) > 1.2 || Math.abs(this.group.rotation.z) > 1.2) this.alive = false;
+                if (Math.abs(this.group.position.x) > 48 || Math.abs(this.group.position.z) > 48) this.alive = false;
+            }
+            
+            dispose() { this.scene.remove(this.group); }
+        }
+
+        // ============================================
+        // VOXEL WORLD
+        // ============================================
+        class VoxelWorld {
+            constructor(scene) {
+                this.scene = scene;
+                this.blocks = [];
+                this.trees = [];
+                this.fruit = [];
+                this.prng = null;
+                this.fruitDropTimer = 0;
+            }
+            
+            generate(seed) {
+                this.prng = new PRNG(seed);
+                this.clear();
+                
+                // Ground with nice grass color
+                const ground = new THREE.Mesh(
+                    new THREE.PlaneGeometry(50, 50, 50, 50),
+                    new THREE.MeshLambertMaterial({ color: 0x3d6b3d })
+                );
+                ground.rotation.x = -Math.PI / 2;
+                ground.receiveShadow = true;
+                this.scene.add(ground);
+                this.blocks.push({
+                    bounds: { minX: -25, maxX: 25, minZ: -25, maxZ: 25 },
+                    getHeightAt: (x, z) => 0,
+                    checkCollision: () => false,
+                    mesh: ground
+                });
+                
+                // Grid for visual reference
+                const grid = new THREE.GridHelper(50, 25, 0x2d5a2d, 0x2d5a2d);
+                grid.position.y = 0.01;
+                this.scene.add(grid);
+                
+                // Generate world features
+                this.generateStructures();
+                this.generateTrees();
+            }
+            
+            generateStructures() {
+                const colors = [0x777777, 0x666666, 0x5d5d5d, 0x6b5d5d, 0x5d6b5d];
+                
+                // Scattered rocks - more natural placement
+                for (let i = 0; i < 30; i++) {
+                    const size = this.prng.range(0.5, 1.2);
+                    let x, z;
+                    do {
+                        x = this.prng.range(-20, 20);
+                        z = this.prng.range(-20, 20);
+                    } while (Math.sqrt(x*x + z*z) < 6);
+                    
+                    this.blocks.push(new VoxelBlock(this.scene, x, size/2, z, size, colors[this.prng.int(0, colors.length-1)], this.prng));
+                }
+                
+                // Stone platforms/steps - explorable structures
+                for (let s = 0; s < 4; s++) {
+                    const angle = (s / 4) * Math.PI * 2;
+                    const dist = 12;
+                    const x = Math.sin(angle) * dist;
+                    const z = Math.cos(angle) * dist;
+                    
+                    const levels = 3;
+                    for (let l = 0; l < levels; l++) {
+                        const blockSize = 0.7;
+                        const y = blockSize / 2 + l * blockSize;
+                        this.blocks.push(new VoxelBlock(this.scene, x, y, z, blockSize, 0x6b6b6b, this.prng));
+                        
+                        // Surrounding blocks for platform
+                        for (const [ox, oz] of [[-1,0], [1,0], [0,-1], [0,1]]) {
+                            this.blocks.push(new VoxelBlock(this.scene, x + ox*blockSize, y, z + oz*blockSize, blockSize, 0x5d5d5d, this.prng));
+                        }
+                    }
+                }
+                
+                // Circular wall - creates an arena feel
+                const wallMat = new THREE.MeshLambertMaterial({ color: 0x555555 });
+                for (let i = 0; i < 12; i++) {
+                    const angle = (i / 12) * Math.PI * 2;
+                    const x = Math.sin(angle) * 16;
+                    const z = Math.cos(angle) * 16;
+                    
+                    const wall = new THREE.Mesh(new THREE.BoxGeometry(2, 1, 0.35), wallMat);
+                    wall.position.set(x, 0.5, z);
+                    wall.rotation.y = -angle + Math.PI / 2;
+                    wall.castShadow = true;
+                    wall.receiveShadow = true;
+                    this.scene.add(wall);
+                    
+                    const wallBounds = {
+                        position: new THREE.Vector3(x, 0.5, z),
+                        rotation: -angle + Math.PI/2,
+                        bounds: { minX: x-1, maxX: x+1, minY: 0, maxY: 1, minZ: z-0.175, maxZ: z+0.175 },
+                        mesh: wall
+                    };
+                    wallBounds.getHeightAt = function(px, pz) {
+                        const rx = (px-x)*Math.cos(-this.rotation) - (pz-z)*Math.sin(-this.rotation);
+                        const rz = (px-x)*Math.sin(-this.rotation) + (pz-z)*Math.cos(-this.rotation);
+                        return (Math.abs(rx) < 1 && Math.abs(rz) < 0.175) ? 1 : -1000;
+                    }.bind(wallBounds);
+                    wallBounds.checkCollision = function(pos, r) {
+                        const rx = (pos.x-x)*Math.cos(-this.rotation) - (pos.z-z)*Math.sin(-this.rotation);
+                        const rz = (pos.x-x)*Math.sin(-this.rotation) + (pos.z-z)*Math.cos(-this.rotation);
+                        return Math.abs(rx) < 1+r && Math.abs(rz) < 0.175+r;
+                    }.bind(wallBounds);
+                    this.blocks.push(wallBounds);
+                }
+                
+                // Ramps for climbing
+                for (let r = 0; r < 4; r++) {
+                    const angle = (r / 4) * Math.PI * 2 + Math.PI / 4;
+                    const x = Math.sin(angle) * 10;
+                    const z = Math.cos(angle) * 10;
+                    for (let i = 0; i < 4; i++) {
+                        const y = 0.2 + i * 0.2;
+                        this.blocks.push(new VoxelBlock(this.scene, x, y, z, 0.45 - i*0.06, 0x7d6b5d, this.prng));
+                    }
+                }
+            }
+            
+            generateTrees() {
+                // Trees in forest rings
+                const innerRing = 8;
+                const outerRing = 20;
+                const treesPerRing = 8;
+                
+                // Inner ring of trees
+                for (let i = 0; i < treesPerRing; i++) {
+                    const angle = (i / treesPerRing) * Math.PI * 2 + this.prng.next() * 0.3;
+                    const dist = innerRing + this.prng.range(-1, 1);
+                    const x = Math.sin(angle) * dist;
+                    const z = Math.cos(angle) * dist;
+                    this.trees.push(new FractalTree(this.scene, x, z, this.prng));
+                }
+                
+                // Outer ring of trees
+                for (let i = 0; i < treesPerRing; i++) {
+                    const angle = (i / treesPerRing) * Math.PI * 2 + this.prng.next() * 0.3;
+                    const dist = outerRing + this.prng.range(-1.5, 1.5);
+                    const x = Math.sin(angle) * dist;
+                    const z = Math.cos(angle) * dist;
+                    this.trees.push(new FractalTree(this.scene, x, z, this.prng));
+                }
+                
+                // Random scattered trees
+                for (let i = 0; i < 10; i++) {
+                    const angle = this.prng.next() * Math.PI * 2;
+                    const dist = this.prng.range(10, 18);
+                    const x = Math.sin(angle) * dist;
+                    const z = Math.cos(angle) * dist;
+                    this.trees.push(new FractalTree(this.scene, x, z, this.prng));
+                }
+            }
+            
+            shakeTrees() {
+                const dropped = [];
+                for (const tree of this.trees) {
+                    const positions = tree.shake();
+                    dropped.push(...positions);
+                }
+                
+                for (const pos of dropped) {
+                    this.fruit.push(new FallingFruit(this.scene, pos.x, pos.y, pos.z, this.prng));
+                }
+                
+                return dropped.length;
+            }
+            
+            updateFruit(dt) {
+                this.fruitDropTimer += dt;
+                if (this.fruitDropTimer > 3) {
+                    this.fruitDropTimer = 0;
+                    if (this.prng.next() < 0.4) {
+                        const tree = this.trees[this.prng.int(0, this.trees.length - 1)];
+                        const positions = tree.shake();
+                        for (const pos of positions) {
+                            this.fruit.push(new FallingFruit(this.scene, pos.x, pos.y, pos.z, this.prng));
+                        }
+                    }
+                }
+                
+                for (let i = this.fruit.length - 1; i >= 0; i--) {
+                    if (!this.fruit[i].update(dt, this)) {
+                        this.fruit[i].dispose();
+                        this.fruit.splice(i, 1);
+                    }
+                }
+            }
+            
+            getFruitCount() { return this.fruit.length; }
+            
+            clear() {
+                for (const b of this.blocks) if (b.dispose) b.dispose();
+                for (const t of this.trees) t.dispose();
+                for (const f of this.fruit) f.dispose();
+                this.blocks = [];
+                this.trees = [];
+                this.fruit = [];
+            }
+        }
+
+        // ============================================
+        // GAME MANAGER
+        // ============================================
+        class GameManager {
+            constructor() {
+                this.creatures = [];
+                this.generation = 1;
+                this.startTime = Date.now();
+                this.simulationSpeed = 1;
+                this.autoEvolve = false;
+                this.breedMode = false;
+                this.selectedForBreeding = [];
+                this.bestFitness = 0;
+                this.seed = Math.floor(Math.random() * 10000);
+                
+                // Camera state
+                this.cameraAngle = 0.5;
+                this.cameraHeight = 20;
+                this.cameraDistance = 35;
+                this.cameraTarget = new THREE.Vector3(0, 0, 0);
+                this.manualCamera = true; // User has manual control
+                this.isDragging = false;
+                this.isRightDragging = false;
+                this.lastMouseX = 0;
+                this.lastMouseY = 0;
+                
+                this.init();
+            }
+            
+            init() {
+                this.scene = new THREE.Scene();
+                this.scene.background = new THREE.Color(0x87ceeb);
+                this.scene.fog = new THREE.Fog(0x87ceeb, 40, 80);
+                
+                this.camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+                this.updateCameraPosition();
+                
+                this.renderer = new THREE.WebGLRenderer({ antialias: true });
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                this.renderer.shadowMap.enabled = true;
+                document.body.appendChild(this.renderer.domElement);
+                
+                // Lighting
+                this.scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+                const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+                dirLight.position.set(15, 25, 10);
+                dirLight.castShadow = true;
+                dirLight.shadow.camera.left = -35;
+                dirLight.shadow.camera.right = 35;
+                dirLight.shadow.camera.top = 35;
+                dirLight.shadow.camera.bottom = -35;
+                dirLight.shadow.mapSize.width = 2048;
+                dirLight.shadow.mapSize.height = 2048;
+                this.scene.add(dirLight);
+                
+                // World
+                this.world = new VoxelWorld(this.scene);
+                this.world.generate(this.seed);
+                
+                this.spawnInitialCreatures();
+                
+                // Events
+                window.addEventListener('resize', () => this.onResize());
+                this.raycaster = new THREE.Raycaster();
+                this.mouse = new THREE.Vector2();
+                
+                window.addEventListener('pointerdown', e => this.onPointerDown(e));
+                window.addEventListener('pointermove', e => this.onPointerMove(e));
+                window.addEventListener('pointerup', e => this.onPointerUp(e));
+                window.addEventListener('wheel', e => this.onWheel(e), { passive: false });
+                
+                document.getElementById('speed-slider').addEventListener('input', e => {
+                    this.simulationSpeed = parseInt(e.target.value);
+                    document.getElementById('speed-value').textContent = this.simulationSpeed + 'x';
+                });
+                
+                this.animate();
+            }
+            
+            spawnInitialCreatures() {
+                for (let i = 0; i < 8; i++) {
+                    const angle = (i / 8) * Math.PI * 2;
+                    const creature = new Creature(this.scene, null, 1, null, new PRNG(this.seed + 1000 + i));
+                    creature.group.position.set(Math.sin(angle) * 3, 0.15, Math.cos(angle) * 3);
+                    this.creatures.push(creature);
+                }
+            }
+            
+            updateCameraPosition() {
+                const x = Math.sin(this.cameraAngle) * this.cameraDistance;
+                const z = Math.cos(this.cameraAngle) * this.cameraDistance;
+                this.camera.position.set(x + this.cameraTarget.x, this.cameraHeight, z + this.cameraTarget.z);
+                this.camera.lookAt(this.cameraTarget.x, 0, this.cameraTarget.z);
+            }
+            
+            onPointerDown(e) {
+                if (e.button === 2 || e.button === 1) {
+                    this.isRightDragging = true;
+                    this.lastMouseX = e.clientX;
+                    this.lastMouseY = e.clientY;
+                    this.manualCamera = true;
+                    return;
+                }
+                if (e.button === 0) {
+                    if (e.target.closest('#ui, #controls, #creature-info, #generation-display, #breed-mode')) return;
+                    
+                    this.mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+                    this.mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+                    this.raycaster.setFromCamera(this.mouse, this.camera);
+                    
+                    for (const c of this.creatures) {
+                        if (this.raycaster.intersectObject(c.body, true).length > 0) {
+                            this.selectCreature(c);
+                            return;
+                        }
+                    }
+                    this.isDragging = true;
+                    this.lastMouseX = e.clientX;
+                    this.lastMouseY = e.clientY;
+                    this.manualCamera = true;
+                }
+            }
+            
+            onPointerMove(e) {
+                const dx = e.clientX - this.lastMouseX;
+                const dy = e.clientY - this.lastMouseY;
+                
+                if (this.isDragging) {
+                    this.cameraAngle -= dx * 0.005;
+                    this.cameraHeight = Math.max(10, Math.min(45, this.cameraHeight + dy * 0.15));
+                    this.updateCameraPosition();
+                }
+                
+                if (this.isRightDragging) {
+                    const fwd = new THREE.Vector3();
+                    this.camera.getWorldDirection(fwd);
+                    const right = new THREE.Vector3().crossVectors(fwd, new THREE.Vector3(0,1,0)).normalize();
+                    this.cameraTarget.x -= dx * 0.03;
+                    this.cameraTarget.z -= dy * 0.03;
+                    this.updateCameraPosition();
+                }
+                
+                this.lastMouseX = e.clientX;
+                this.lastMouseY = e.clientY;
+            }
+            
+            onPointerUp() {
+                this.isDragging = false;
+                this.isRightDragging = false;
+            }
+            
+            onWheel(e) {
+                e.preventDefault();
+                this.cameraDistance = Math.max(15, Math.min(60, this.cameraDistance + e.deltaY * 0.015));
+                this.updateCameraPosition();
+            }
+            
+            onResize() {
+                this.camera.aspect = window.innerWidth / window.innerHeight;
+                this.camera.updateProjectionMatrix();
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+            }
+            
+            selectCreature(c) {
+                for (const creature of this.creatures) {
+                    creature.selected = false;
+                    if (creature.body) creature.body.material.emissive.setHex(0x000000);
+                }
+                c.selected = true;
+                c.body.material.emissive.setHex(0x333333);
+                document.getElementById('creature-info').style.display = 'block';
+                this.updateCreatureInfo(c);
+                
+                if (this.breedMode) {
+                    if (!this.selectedForBreeding.includes(c)) {
+                        this.selectedForBreeding.push(c);
+                        c.body.material.emissive.setHex(0xff69b4);
+                    }
+                    document.getElementById('breed-status').textContent = `Selected: ${this.selectedForBreeding.length}/2`;
+                    if (this.selectedForBreeding.length === 2) setTimeout(() => this.breedCreatures(), 400);
+                }
+            }
+            
+            updateCreatureInfo(c) {
+                document.getElementById('c-type').textContent = c.type;
+                document.getElementById('c-legs').textContent = c.type === 'biped' ? '2' : '4';
+                document.getElementById('c-fitness').textContent = c.fitness.toFixed(2);
+                document.getElementById('c-age').textContent = c.age.toFixed(1) + 's';
+                document.getElementById('c-gen').textContent = c.generation;
+                document.getElementById('c-speed').textContent = (c.fitness / Math.max(0.1, c.age)).toFixed(2);
+                const d = c.group.position.distanceTo(c.startPos);
+                document.getElementById('c-distance').textContent = d.toFixed(2);
+                document.getElementById('c-status').innerHTML = c.alive ? 
+                    '<span style="color:#66bb6a">● Alive</span>' : '<span style="color:#ef5350">● Fallen</span>';
+                document.getElementById('c-fruit').textContent = c.fruitEaten;
+            }
+            
+            updateCreatureBrainDisplay(c) {
+                if (!c?.brain) return;
+                const outputs = c.brain.forward([0.5,0.5,0.5,0.5,0.5,0.5,1,0.5,0.5,0.5,0.5,0.5]);
+                for (let i = 0; i < 4; i++) {
+                    const v = outputs[i] || 0.5;
+                    document.getElementById(`brain-${i}`).style.width = `${v*100}%`;
+                    document.getElementById(`brain-${i}-val`).textContent = v.toFixed(2);
+                }
+            }
+            
+            showNotification(text) {
+                const notif = document.createElement('div');
+                notif.className = 'notification';
+                notif.textContent = text;
+                document.getElementById('notifications').appendChild(notif);
+                setTimeout(() => notif.remove(), 2000);
+            }
+            
+            animate() {
+                requestAnimationFrame(() => this.animate());
+                const dt = 0.016 * this.simulationSpeed;
+                const time = Date.now() / 1000;
+                
+                this.world.updateFruit(dt);
+                
+                for (const c of this.creatures) {
+                    c.update(dt, time, this.world);
+                }
+                
+                const selected = this.creatures.find(c => c.selected);
+                if (selected?.alive) {
+                    this.updateCreatureBrainDisplay(selected);
+                    this.updateCreatureInfo(selected);
+                }
+                
+                // Smooth camera follow (only if not manually controlling)
+                const best = this.creatures.reduce((b, c) => c.fitness > b.fitness ? c : b, this.creatures[0]);
+                if (best && !this.isDragging && !this.isRightDragging) {
+                    if (this.manualCamera) {
+                        // Gently lerp target only
+                        this.cameraTarget.lerp(best.group.position, 0.02);
+                    } else {
+                        this.cameraTarget.lerp(best.group.position, 0.03);
+                    }
+                    this.updateCameraPosition();
+                }
+                
+                this.updateUI();
+                
+                // Auto evolve: automatically breed next generation when all creatures die or get old
+                if (this.autoEvolve) {
+                    const allDead = this.creatures.every(c => !c.alive);
+                    const allOld = this.creatures.every(c => c.age > 25);
+                    if (allDead || allOld) {
+                        this.evolveGeneration();
+                    }
+                }
+                
+                this.renderer.render(this.scene, this.camera);
+            }
+            
+            updateUI() {
+                document.getElementById('creature-count').textContent = this.creatures.length;
+                document.getElementById('generation').textContent = this.generation;
+                const bestFit = Math.max(...this.creatures.map(c => c.fitness), 0);
+                if (bestFit > this.bestFitness) this.bestFitness = bestFit;
+                document.getElementById('best-fitness').textContent = bestFit.toFixed(2);
+                document.getElementById('time').textContent = ((Date.now() - this.startTime) / 1000).toFixed(0);
+                document.getElementById('alive-count').textContent = this.creatures.filter(c => c.alive).length;
+                const avg = this.creatures.reduce((s,c) => s + c.fitness, 0) / this.creatures.length || 0;
+                document.getElementById('avg-fitness').textContent = avg.toFixed(2);
+                document.getElementById('max-dist').textContent = bestFit.toFixed(2);
+                document.getElementById('fruit-count').textContent = this.world.getFruitCount();
+            }
+            
+            evolveGeneration() {
+                const sorted = [...this.creatures].sort((a, b) => b.fitness - a.fitness);
+                const parents = sorted.slice(0, Math.min(4, sorted.length));
+                
+                if (parents.length === 0) return;
+                
+                for (const c of this.creatures) c.dispose();
+                this.creatures = [];
+                this.generation++;
+                
+                for (let i = 0; i < 8; i++) {
+                    const p1 = parents[this.world.prng.int(0, parents.length - 1)];
+                    const p2 = parents[this.world.prng.int(0, parents.length - 1)];
+                    const c = new Creature(this.scene, null, this.generation, {0: p1, 1: p2}, this.world.prng);
+                    const angle = (i / 8) * Math.PI * 2;
+                    c.group.position.set(Math.sin(angle) * 3, 0.15, Math.cos(angle) * 3);
+                    this.creatures.push(c);
+                }
+                document.getElementById('generation').textContent = this.generation;
+            }
+        }
+
+        // ============================================
+        // GLOBAL
+        // ============================================
+        let game;
+        function init() { game = new GameManager(); }
+        
+        function spawnCreature() {
+            if (!game) return;
+            const prng = new PRNG(Date.now());
+            const c = new Creature(game.scene, null, game.generation, null, prng);
+            const angle = prng.next() * Math.PI * 2;
+            c.group.position.set(Math.sin(angle) * 3, 0.15, Math.cos(angle) * 3);
+            game.creatures.push(c);
+        }
+        
+        function startBreedMode() {
+            if (!game) return;
+            game.breedMode = true;
+            game.selectedForBreeding = [];
+            document.getElementById('breed-mode').style.display = 'block';
+        }
+        
+        function cancelBreedMode() {
+            if (!game) return;
+            game.breedMode = false;
+            game.selectedForBreeding = [];
+            document.getElementById('breed-mode').style.display = 'none';
+            for (const c of game.creatures) if (c.body) c.body.material.emissive.setHex(0x000000);
+        }
+        
+        function breedCreatures() {
+            if (!game || game.selectedForBreeding.length < 2) return;
+            const [p1, p2] = game.selectedForBreeding;
+            for (let i = 0; i < 4; i++) {
+                const c = new Creature(game.scene, null, game.generation, {0: p1, 1: p2}, game.world.prng);
+                const angle = (i / 4) * Math.PI * 2 + game.world.prng.next() * 0.5;
+                c.group.position.set(Math.sin(angle) * 3, 0.15, Math.cos(angle) * 3);
+                game.creatures.push(c);
+            }
+            cancelBreedMode();
+        }
+        
+        function shakeTrees() {
+            if (!game?.world) return;
+            const count = game.world.shakeTrees();
+            game.showNotification(`🍎 ${count} fruit dropped!`);
+        }
+        
+        function resetWorld() {
+            if (!game) return;
+            for (const c of game.creatures) c.dispose();
+            game.creatures = [];
+            game.world.clear();
+            game.generation = 1;
+            game.startTime = Date.now();
+            game.bestFitness = 0;
+            game.seed = Math.floor(Math.random() * 10000);
+            game.world.generate(game.seed);
+            game.spawnInitialCreatures();
+        }
+        
+        function toggleAutoEvolve() {
+            if (!game) return;
+            game.autoEvolve = !game.autoEvolve;
+            document.getElementById('auto-btn').textContent = `🤖 Auto: ${game.autoEvolve ? 'ON' : 'OFF'}`;
+            document.getElementById('auto-btn').className = game.autoEvolve ? 'warning active' : 'warning';
+        }
+
+        init();
+        document.addEventListener('contextmenu', e => e.preventDefault());
+    </script>
+</body>
+</html>

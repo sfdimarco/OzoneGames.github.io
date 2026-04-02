@@ -1,0 +1,1191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Milk & Cheese Clicker Tycoon - Mini-Game Fun!</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <style>
+        /* Basic Reset & Full Screen Body Styling */
+        body, html {
+            height: 100%;
+            width: 100%;
+            margin: 0;
+            font-family: 'Arial', sans-serif;
+            background-color: #e0f2f7; /* Light blue, like a dairy aisle */
+            color: #003366; /* Dark blue for text */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden; /* Prevent scrollbars on body */
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            position: fixed; /* Prevent pull-to-refresh on mobile */
+        }
+
+        /* Game Container: Main wrapper for the game interface - Full Screen */
+        #game-container {
+            display: flex;
+            background-color: #ffffff; /* Clean white */
+            width: 100vw; /* Full viewport width */
+            height: 100vh; /* Full viewport height */
+            max-width: none;
+            max-height: none;
+            border-radius: 0; /* No rounded corners for full screen */
+            box-shadow: none; /* No shadow for full screen */
+            border: none; /* No border for full screen */
+            overflow: hidden; /* Ensure content stays within bounds */
+        }
+
+        /* Left Panel: Contains the milk carton and score */
+        #left-panel {
+            flex: 1; 
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 15px; 
+            border-right: 3px dashed #add8e6; 
+            box-sizing: border-box;
+        }
+
+        /* Score Display Area */
+        .score-area {
+            text-align: center;
+            margin-bottom: 10px; /* Reduced margin */
+        }
+
+        #milk-display, #cheese-display {
+            font-size: clamp(1.5em, 3vw, 2.2em); 
+            font-weight: bold;
+            margin-bottom: 1px;
+            color: #005A9C;
+            text-shadow: 1px 1px 2px #f0f8ff;
+        }
+        #cheese-display {
+            color: #E8A000; 
+        }
+
+        #mps-display, #mpc-display, #cps-display { 
+            font-size: clamp(0.8em, 1.7vw, 1em); 
+            margin-bottom: 1px;
+        }
+        #mps-display { color: #007bff; }
+        #mpc-display { color: #17a2b8; }
+        #cps-display { color: #E88000; } 
+
+
+        /* Milk Carton Button: The main clickable item */
+        #milk-carton-button {
+            width: clamp(90px, 15vw, 140px); 
+            height: clamp(140px, 22vh, 200px); 
+            background-image: url('https://placehold.co/150x250/FFFFFF/007BFF?text=MILK&font=Roboto');
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            border-radius: 10px;
+            border: 3px solid #007bff;
+            cursor: pointer;
+            transition: transform 0.08s cubic-bezier(0.25, 0.46, 0.45, 0.94), box-shadow 0.08s ease;
+            box-shadow: 0 6px 12px rgba(0, 123, 255, 0.25), 0 0 0 2px #ffffff, 0 0 0 4px #87CEFA;
+            -webkit-tap-highlight-color: transparent;
+            background-color: #f8f9fa;
+            margin-bottom: 10px; 
+        }
+
+        #milk-carton-button:hover { transform: scale(1.03); }
+        #milk-carton-button:active {
+            transform: scale(0.93);
+            box-shadow: 0 3px 6px rgba(0, 123, 255, 0.3), 0 0 0 2px #ffffff, 0 0 0 4px #87CEFA;
+        }
+
+        /* Convert to Cheese Button */
+        #convert-to-cheese-button {
+            padding: 8px 14px; 
+            background: linear-gradient(145deg, #f0ad4e, #ec971f); 
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: clamp(0.8em, 1.7vw, 0.95em); 
+            font-weight: bold;
+            transition: background 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease;
+            box-shadow: 0 3px 5px rgba(0,0,0,0.15);
+            -webkit-tap-highlight-color: transparent;
+            width: clamp(160px, 40%, 200px); 
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        #convert-to-cheese-button:hover:not(:disabled) {
+            background: linear-gradient(145deg, #f3b966, #eea236);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 7px rgba(0,0,0,0.2);
+        }
+        #convert-to-cheese-button:active:not(:disabled) {
+            transform: translateY(1px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+        }
+        #convert-to-cheese-button:disabled {
+            background: #c0c0c0; color: #777; cursor: not-allowed; box-shadow: none;
+        }
+        
+        /* Mini-Game Button */
+        #play-minigame-button {
+            padding: 8px 14px;
+            background: linear-gradient(145deg, #5cb85c, #4cae4c); /* Green gradient */
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: clamp(0.8em, 1.7vw, 0.95em);
+            font-weight: bold;
+            transition: background 0.2s ease, transform 0.1s ease;
+            box-shadow: 0 3px 5px rgba(0,0,0,0.15);
+            width: clamp(160px, 40%, 200px); 
+            text-align: center;
+        }
+        #play-minigame-button:hover:not(:disabled) {
+            background: linear-gradient(145deg, #6fcf6f, #5cb85c);
+            transform: translateY(-1px);
+        }
+         #play-minigame-button:disabled {
+            background: #c0c0c0; color: #777; cursor: not-allowed; box-shadow: none;
+        }
+
+
+        /* Right Panel: Contains upgrades */
+        #right-panel {
+            flex: 1.5; 
+            padding: 15px 20px; 
+            background-color: #f0f8ff;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            box-sizing: border-box;
+        }
+        
+        .store-header {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 12px;
+            border-bottom: 3px solid #add8e6;
+            padding-bottom: 8px;
+        }
+
+        #store-title-display { /* Store Title */
+            color: #005A9C;
+            margin:0; 
+            font-size: clamp(1.3em, 2.8vw, 1.7em);
+            text-align: center;
+            flex-grow: 1; 
+        }
+        #rename-store-button {
+            font-size: 0.7em;
+            padding: 3px 6px;
+            margin-left: 10px;
+            background-color: #6c757d;
+            color: white;
+            border:none;
+            border-radius: 4px;
+            cursor:pointer;
+            flex-shrink: 0;
+        }
+        #rename-store-button:hover {
+            background-color: #5a6268;
+        }
+        #store-naming-controls {
+            display: none; 
+            margin-top: -5px; 
+            margin-bottom: 10px;
+            display: flex;
+            gap: 5px;
+            align-items: center;
+            justify-content: center;
+        }
+        #store-naming-controls input[type="text"] {
+            padding: 5px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 0.9em;
+            width: 150px; 
+        }
+        #store-naming-controls button {
+            padding: 5px 10px;
+            font-size: 0.9em;
+            background-color: #28a745; 
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+
+         #right-panel h3.section-title { 
+            text-align: center;
+            color: #004080;
+            font-size: clamp(1em, 2.2vw, 1.3em);
+            margin-top: 12px;
+            margin-bottom: 8px;
+            border-top: 1px dashed #add8e6;
+            padding-top: 8px;
+        }
+         #right-panel h3.section-title:first-of-type {
+            border-top: none; padding-top: 0; margin-top: 0;
+        }
+
+        .upgrade {
+            background-color: #ffffff;
+            border: 2px solid #add8e6;
+            border-radius: 8px; 
+            padding: 8px; 
+            margin-bottom: 8px; 
+            display: flex;
+            flex-direction: column; 
+            align-items: stretch; 
+            transition: background-color 0.2s ease, transform 0.15s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+        }
+         .upgrade-main-info { 
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+        }
+
+
+        .upgrade:hover {
+            background-color: #e6f7ff;
+            transform: translateY(-1px); 
+            box-shadow: 0 3px 6px rgba(0,0,0,0.05);
+        }
+
+        .upgrade-info {
+            flex-grow: 1;
+            margin-right: 6px;
+        }
+
+        .upgrade-info h4 { 
+            margin: 0 0 3px 0;
+            color: #004080;
+            font-size: clamp(0.9em, 1.8vw, 1.1em);
+        }
+         .upgrade-info h4 .plant-name-display { 
+            font-style: italic;
+            color: #007bff;
+        }
+
+
+        .upgrade-info p { 
+            margin: 0 0 1px 0;
+            font-size: clamp(0.7em, 1.5vw, 0.85em);
+            color: #005A9C;
+        }
+        .upgrade-info p.effect-description { 
+             font-style: italic;
+             font-size: clamp(0.65em, 1.3vw, 0.75em);
+             color: #007BFF;
+        }
+        
+        .plant-naming-controls {
+            margin-top: 5px;
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }
+        .plant-naming-controls input[type="text"] {
+            flex-grow: 1;
+            padding: 4px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 0.85em;
+        }
+        .plant-naming-controls button {
+            padding: 4px 8px;
+            font-size: 0.8em;
+            background-color: #28a745; 
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+         .plant-naming-controls button.rename-plant-btn {
+            background-color: #ffc107; 
+            color: #212529;
+        }
+
+
+        .buy-button {
+            padding: 7px 12px; 
+            background: linear-gradient(145deg, #007bff, #0056b3);
+            color: #fff;
+            border: none;
+            border-radius: 5px; 
+            cursor: pointer;
+            font-size: clamp(0.75em, 1.6vw, 0.9em);
+            font-weight: bold;
+            transition: background 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease;
+            box-shadow: 0 2px 3px rgba(0,0,0,0.15);
+            -webkit-tap-highlight-color: transparent;
+            flex-shrink: 0; 
+        }
+        .buy-button.cheese-upgrade-btn { 
+             background: linear-gradient(145deg, #f0ad4e, #ec971f);
+        }
+        .buy-button.cheese-upgrade-btn:hover:not(:disabled) {
+            background: linear-gradient(145deg, #f3b966, #eea236);
+        }
+
+
+        .buy-button:hover:not(:disabled) {
+            background: linear-gradient(145deg, #0088ff, #0069cc);
+            transform: translateY(-1px);
+            box-shadow: 0 3px 5px rgba(0,0,0,0.2);
+        }
+        .buy-button:active:not(:disabled) {
+            transform: translateY(0px); 
+            box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+        }
+        .buy-button:disabled {
+            background: #c0c0c0; color: #777; cursor: not-allowed; box-shadow: none;
+        }
+        
+        .click-text {
+            position: absolute;
+            font-size: clamp(1.2em, 3vw, 1.8em);
+            color: #007BFF;
+            font-weight: bold;
+            pointer-events: none;
+            animation: floatUpAndFade 1s ease-out forwards;
+            text-shadow: 1px 1px 0px #fff, -1px -1px 0px #fff, 1px -1px 0px #fff, -1px 1px 0px #fff;
+            z-index: 100;
+        }
+        
+        .secret-bonus-popup {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #ffeb3b; 
+            color: #333;
+            padding: 10px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            z-index: 1001; 
+            font-size: 1.1em;
+            font-weight: bold;
+            text-align: center;
+            animation: fadeInOut 3s ease-in-out forwards;
+        }
+
+        @keyframes fadeInOut {
+            0%, 100% { opacity: 0; transform: translateX(-50%) translateY(-20px); }
+            10%, 90% { opacity: 1; transform: translateX(-50%) translateY(0); }
+        }
+
+
+        @keyframes floatUpAndFade {
+            0% { opacity: 1; transform: translateY(0) scale(1); }
+            100% { opacity: 0; transform: translateY(-60px) scale(1.2); }
+        }
+
+        /* Mini-Game Styles */
+        #minigame-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7); /* Semi-transparent black */
+            display: none; /* Hidden by default */
+            justify-content: center;
+            align-items: center;
+            z-index: 1000; /* On top of everything */
+        }
+        #minigame-container {
+            background-color: #fff8e1; /* Creamy white */
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.3);
+            text-align: center;
+            width: 80%;
+            max-width: 500px;
+            position: relative; /* For positioning elements inside */
+        }
+        #minigame-canvas {
+            width: 100%;
+            height: 300px; /* Adjust as needed */
+            background-color: #cce7ff; /* Light sky blue */
+            border: 2px solid #87CEFA;
+            border-radius: 10px;
+            position: relative;
+            overflow: hidden; /* Drops shouldn't go outside */
+            margin-bottom: 15px;
+        }
+        #pail {
+            width: 60px;
+            height: 40px;
+            background-color: #8B4513; /* SaddleBrown */
+            border: 2px solid #A0522D; /* Sienna */
+            border-bottom-left-radius: 10px;
+            border-bottom-right-radius: 10px;
+            position: absolute;
+            bottom: 5px;
+            left: 50%; /* Start in middle */
+            transform: translateX(-50%);
+            transition: left 0.1s linear; /* Smooth movement */
+        }
+        .milk-drop, .cheese-drop {
+            width: 15px;
+            height: 20px;
+            background-color: #ffffff; /* White for milk */
+            border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%; /* Teardrop shape */
+            position: absolute;
+            box-shadow: 0 0 3px rgba(0,0,0,0.2);
+        }
+        .cheese-drop {
+            background-color: #FFD700; /* Gold for cheese */
+            width: 20px; /* Slightly bigger */
+            height: 20px;
+            border-radius: 5px; /* Square-ish cheese */
+        }
+        #minigame-score, #minigame-timer {
+            font-size: 1.2em;
+            color: #005A9C;
+            margin-bottom: 10px;
+        }
+        #minigame-message {
+            font-size: 1.1em;
+            margin-bottom: 15px;
+            min-height: 20px; /* Prevent layout shift */
+        }
+        #minigame-overlay button {
+            padding: 8px 15px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        #minigame-overlay button:hover {
+            background-color: #0056b3;
+        }
+
+
+        @media (max-width: 768px) {
+            #game-container { flex-direction: column; }
+            #left-panel {
+                border-right: none; border-bottom: 3px dashed #add8e6;
+                height: auto; min-height: 40%; width: 100%;
+                padding-top: 15px; padding-bottom: 15px;
+            }
+            #right-panel {
+                height: auto; flex-grow: 1; width: 100%; padding: 10px 15px;
+            }
+            #milk-carton-button {
+                width: clamp(100px, 22vw, 140px); height: clamp(150px, 22vh, 200px);
+                margin-bottom: 8px;
+            }
+            .score-area { margin-bottom: 8px; }
+        }
+         @media (max-width: 480px) {
+            /* .upgrade { flex-direction: column; align-items: stretch; } */ 
+            .upgrade-main-info { flex-direction: column; align-items: stretch; }
+            .upgrade-info { margin-right: 0; margin-bottom: 6px; text-align: center; }
+            .buy-button { width: 100%; padding: 8px; margin-top: 5px;}
+            #left-panel { min-height: 35%; }
+             #milk-carton-button {
+                width: clamp(90px, 25vw, 120px); height: clamp(140px, 20vh, 180px);
+            }
+            #convert-to-cheese-button { width: clamp(150px, 55%, 190px); }
+            #milk-display, #cheese-display { font-size: clamp(1.5em, 3vw, 2.2em); }
+            #mps-display, #mpc-display, #cps-display { font-size: clamp(0.8em, 1.6vw, 1em); }
+            #minigame-container { width: 90%; padding: 15px; }
+            #minigame-canvas { height: 250px; }
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="left-panel">
+            <div class="score-area">
+                <div id="milk-display">0 Milk</div>
+                <div id="cheese-display">0 Cheese</div>
+                <div id="mps-display">0 MPS</div>
+                <div id="mpc-display">1 MPC</div>
+                <div id="cps-display">0 CPS</div> 
+            </div>
+            <div id="milk-carton-button" role="button" aria-label="Click to get milk" tabindex="0"
+                 title="Click to get more milk!"
+                 onerror="this.style.backgroundImage='url(\'https://placehold.co/150x250/E0F2F7/003366?text=MILK!&font=Arial\')'; console.error('Milk carton image failed to load. Using fallback.')">
+            </div>
+            <button id="convert-to-cheese-button" aria-label="Convert milk to cheese">
+                Convert to Cheese (10 Milk)
+            </button>
+            <button id="play-minigame-button">Play Milk Catch! (5 Milk)</button>
+        </div>
+        <div id="right-panel">
+            <div class="store-header">
+                <h2 id="store-title-display">Store</h2>
+                <button id="rename-store-button" title="Rename Store">✏️</button>
+            </div>
+            <div id="store-naming-controls" style="display: none;">
+                <input type="text" id="store-name-input" placeholder="Enter Store Name">
+                <button id="save-store-name-button">Save Name</button>
+            </div>
+            
+            <h3 class="section-title">Milk Per Click Upgrades</h3>
+            <div class="upgrade" id="upgrade-reinforcedCarton">
+                <div class="upgrade-main-info">
+                    <div class="upgrade-info">
+                        <h4>Reinforced Carton</h4>
+                        <p>Cost: <span id="reinforcedCarton-cost">50</span> Milk</p>
+                        <p>Effect: +<span class="reinforcedCarton-mpc-value">1</span> MPC</p>
+                        <p class="effect-description">Owned: <span id="reinforcedCarton-owned">0</span></p>
+                    </div>
+                    <button class="buy-button" id="buy-reinforcedCarton">Buy</button>
+                </div>
+            </div>
+            <div class="upgrade" id="upgrade-ergonomicSpout">
+                 <div class="upgrade-main-info">
+                    <div class="upgrade-info">
+                        <h4>Ergonomic Pour Spout</h4>
+                        <p>Cost: <span id="ergonomicSpout-cost">500</span> Milk</p>
+                        <p>Effect: +<span class="ergonomicSpout-mpc-value">5</span> MPC</p>
+                        <p class="effect-description">Owned: <span id="ergonomicSpout-owned">0</span></p>
+                    </div>
+                    <button class="buy-button" id="buy-ergonomicSpout">Buy</button>
+                </div>
+            </div>
+            <div class="upgrade" id="upgrade-magicLadle">
+                <div class="upgrade-main-info">
+                    <div class="upgrade-info">
+                        <h4>Magic Ladle</h4>
+                        <p>Cost: <span id="magicLadle-cost">2500</span> Milk</p>
+                        <p>Effect: +<span class="magicLadle-mpc-value">20</span> MPC</p>
+                        <p class="effect-description">Owned: <span id="magicLadle-owned">0</span></p>
+                    </div>
+                    <button class="buy-button" id="buy-magicLadle">Buy</button>
+                </div>
+            </div>
+
+            <h3 class="section-title">Milk Per Second Helpers</h3>
+            <div class="upgrade" id="upgrade-glassOfMilk">
+                <div class="upgrade-main-info">
+                    <div class="upgrade-info">
+                        <h4>Glass of Milk</h4>
+                        <p>Cost: <span id="glassOfMilk-cost">10</span> Milk</p>
+                        <p>Effect: +<span class="glassOfMilk-mps-value">1</span> MPS</p>
+                        <p class="effect-description">Owned: <span id="glassOfMilk-owned">0</span></p>
+                    </div>
+                    <button class="buy-button" id="buy-glassOfMilk">Buy</button>
+                </div>
+            </div>
+            <div class="upgrade" id="upgrade-milkshakeMachine">
+                 <div class="upgrade-main-info">
+                    <div class="upgrade-info">
+                        <h4>Milkshake Machine</h4>
+                        <p>Cost: <span id="milkshakeMachine-cost">100</span> Milk</p>
+                        <p>Effect: +<span class="milkshakeMachine-mps-value">5</span> MPS</p>
+                        <p class="effect-description">Owned: <span id="milkshakeMachine-owned">0</span></p>
+                    </div>
+                    <button class="buy-button" id="buy-milkshakeMachine">Buy</button>
+                </div>
+            </div>
+            <div class="upgrade" id="upgrade-dairyCow">
+                <div class="upgrade-main-info">
+                    <div class="upgrade-info">
+                        <h4>Dairy Cow</h4>
+                        <p>Cost: <span id="dairyCow-cost">1000</span> Milk</p>
+                        <p>Effect: +<span class="dairyCow-mps-value">50</span> MPS</p>
+                        <p class="effect-description">Owned: <span id="dairyCow-owned">0</span></p>
+                    </div>
+                    <button class="buy-button" id="buy-dairyCow">Buy</button>
+                </div>
+            </div>
+            <div class="upgrade" id="upgrade-deliveryTruck">
+                <div class="upgrade-main-info">
+                    <div class="upgrade-info">
+                        <h4>Delivery Truck</h4>
+                        <p>Cost: <span id="deliveryTruck-cost">10000</span> Milk</p>
+                        <p>Effect: +<span class="deliveryTruck-mps-value">250</span> MPS</p>
+                        <p class="effect-description">Owned: <span id="deliveryTruck-owned">0</span></p>
+                    </div>
+                    <button class="buy-button" id="buy-deliveryTruck">Buy</button>
+                </div>
+            </div>
+            <div class="upgrade" id="upgrade-dairyPlant"> <div class="upgrade-main-info">
+                    <div class="upgrade-info">
+                        <h4><span id="dairyPlant-name-display">Automated Dairy Plant</span></h4>
+                        <p>Cost: <span id="dairyPlant-cost">50000</span> Milk</p>
+                        <p>Effect: +<span class="dairyPlant-mps-value">1000</span> MPS</p>
+                        <p class="effect-description">Owned: <span id="dairyPlant-owned">0</span></p>
+                    </div>
+                    <button class="buy-button" id="buy-dairyPlant">Buy</button>
+                </div>
+                <div class="plant-naming-controls" id="dairyPlant-naming-controls" style="display: none;">
+                    <input type="text" id="dairyPlant-name-input" placeholder="Enter Plant Name">
+                    <button id="save-dairyPlant-name-button">Save Name</button>
+                </div>
+                 <button class="rename-plant-btn" id="rename-dairyPlant-button" style="display: none; margin-top: 5px; font-size: 0.8em; padding: 4px 8px;">Rename Plant</button>
+            </div>
+
+
+            <h3 class="section-title">Cheese Based Upgrades</h3>
+            <div class="upgrade" id="upgrade-autoConverter">
+                <div class="upgrade-main-info">
+                    <div class="upgrade-info">
+                        <h4>Auto Cheese Converter</h4>
+                        <p>Cost: <span id="autoConverter-cost">5</span> Cheese</p>
+                        <p>Effect: +<span class="autoConverter-cps-value">1</span> Cheese/sec (auto)</p> 
+                        <p class="effect-description">Owned: <span id="autoConverter-owned">0</span></p>
+                    </div>
+                    <button class="buy-button cheese-upgrade-btn" id="buy-autoConverter">Buy</button>
+                </div>
+            </div>
+            <div class="upgrade" id="upgrade-agingRack">
+                <div class="upgrade-main-info">
+                    <div class="upgrade-info">
+                        <h4>Cheese Aging Rack</h4>
+                        <p>Cost: <span id="agingRack-cost">10</span> Cheese</p>
+                        <p>Effect: +<span class="agingRack-mps-value">2</span> MPS</p>
+                        <p class="effect-description">Owned: <span id="agingRack-owned">0</span></p>
+                    </div>
+                    <button class="buy-button cheese-upgrade-btn" id="buy-agingRack">Buy</button>
+                </div>
+            </div>
+            <div class="upgrade" id="upgrade-artisanTools">
+                <div class="upgrade-main-info">
+                    <div class="upgrade-info">
+                        <h4>Artisan Cheesemaker's Tools</h4>
+                        <p>Cost: <span id="artisanTools-cost">20</span> Cheese</p>
+                        <p>Effect: +<span class="artisanTools-mpc-value">10</span> MPC</p>
+                        <p class="effect-description">Owned: <span id="artisanTools-owned">0</span></p>
+                    </div>
+                    <button class="buy-button cheese-upgrade-btn" id="buy-artisanTools">Buy</button>
+                </div>
+            </div>
+            <div class="upgrade" id="upgrade-gourmetRecipes">
+                <div class="upgrade-main-info">
+                    <div class="upgrade-info">
+                        <h4>Gourmet Cheese Recipes</h4>
+                        <p>Cost: <span id="gourmetRecipes-cost">50</span> Cheese</p>
+                        <p>Effect: +<span class="gourmetRecipes-mps-value">20</span> MPS</p>
+                        <p class="effect-description">Owned: <span id="gourmetRecipes-owned">0</span></p>
+                    </div>
+                    <button class="buy-button cheese-upgrade-btn" id="buy-gourmetRecipes">Buy</button>
+                </div>
+            </div>
+            <div class="upgrade" id="upgrade-industrialVat">
+                 <div class="upgrade-main-info">
+                    <div class="upgrade-info">
+                        <h4>Industrial Cheese Vat</h4>
+                        <p>Cost: <span id="industrialVat-cost">100</span> Cheese</p>
+                        <p>Effect: +<span class="industrialVat-cps-value">5</span> Cheese/sec (auto)</p>
+                        <p class="effect-description">Owned: <span id="industrialVat-owned">0</span></p>
+                    </div>
+                    <button class="buy-button cheese-upgrade-btn" id="buy-industrialVat">Buy</button>
+                </div>
+            </div>
+            <div class="upgrade" id="upgrade-caveExpansion">
+                <div class="upgrade-main-info">
+                    <div class="upgrade-info">
+                        <h4>Cheese Cave Expansion</h4>
+                        <p>Cost: <span id="caveExpansion-cost">30</span> Cheese</p>
+                        <p>Effect: +<span class="caveExpansion-mps-value">10</span> MPS</p>
+                        <p class="effect-description">Owned: <span id="caveExpansion-owned">0</span></p>
+                    </div>
+                    <button class="buy-button cheese-upgrade-btn" id="buy-caveExpansion">Buy</button>
+                </div>
+            </div>
+            <div class="upgrade" id="upgrade-goldenLadle">
+                <div class="upgrade-main-info">
+                    <div class="upgrade-info">
+                        <h4>Golden Ladle</h4>
+                        <p>Cost: <span id="goldenLadle-cost">75</span> Cheese</p>
+                        <p>Effect: +<span class="goldenLadle-mpc-value">25</span> MPC</p>
+                        <p class="effect-description">Owned: <span id="goldenLadle-owned">0</span></p>
+                    </div>
+                    <button class="buy-button cheese-upgrade-btn" id="buy-goldenLadle">Buy</button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div id="minigame-overlay">
+        <div id="minigame-container">
+            <h3 id="minigame-title">Milk Pail Catch!</h3>
+            <div id="minigame-score">Milk: 0 | Cheese: 0</div>
+            <div id="minigame-timer">Time: 30s</div>
+            <div id="minigame-canvas">
+                <div id="pail"></div>
+                </div>
+            <div id="minigame-message">Press Start to Play (Cost: 5 Milk)</div>
+            <button id="minigame-start-button">Start Game</button>
+            <button id="minigame-close-button" style="display:none;">Close</button>
+        </div>
+    </div>
+
+    <script>
+        // --- DOM Elements ---
+        const milkDisplay = document.getElementById('milk-display');
+        const cheeseDisplay = document.getElementById('cheese-display');
+        const mpsDisplay = document.getElementById('mps-display');
+        const mpcDisplay = document.getElementById('mpc-display');
+        const cpsDisplay = document.getElementById('cps-display'); 
+        const milkCartonButton = document.getElementById('milk-carton-button');
+        const convertToCheeseButton = document.getElementById('convert-to-cheese-button');
+        const gameContainer = document.getElementById('game-container');
+        const playMinigameButton = document.getElementById('play-minigame-button');
+        
+        // Plant Naming DOM Elements
+        const dairyPlantNameDisplay = document.getElementById('dairyPlant-name-display');
+        const dairyPlantNamingControls = document.getElementById('dairyPlant-naming-controls');
+        const dairyPlantNameInput = document.getElementById('dairyPlant-name-input');
+        const saveDairyPlantNameButton = document.getElementById('save-dairyPlant-name-button');
+        const renameDairyPlantButton = document.getElementById('rename-dairyPlant-button');
+
+        // Store Naming DOM Elements
+        const storeTitleDisplay = document.getElementById('store-title-display');
+        const renameStoreButton = document.getElementById('rename-store-button');
+        const storeNamingControls = document.getElementById('store-naming-controls');
+        const storeNameInput = document.getElementById('store-name-input');
+        const saveStoreNameButton = document.getElementById('save-store-name-button');
+
+        // Mini-Game DOM Elements
+        const minigameOverlay = document.getElementById('minigame-overlay');
+        const minigameContainer = document.getElementById('minigame-container');
+        const minigameCanvas = document.getElementById('minigame-canvas');
+        const pailElement = document.getElementById('pail');
+        const minigameScoreDisplay = document.getElementById('minigame-score');
+        const minigameTimerDisplay = document.getElementById('minigame-timer');
+        const minigameMessage = document.getElementById('minigame-message');
+        const minigameStartButton = document.getElementById('minigame-start-button');
+        const minigameCloseButton = document.getElementById('minigame-close-button');
+
+
+        // --- Game State Variables ---
+        let milk = 0;
+        let cheese = 0;
+        let milkPerSecond = 0;
+        let milkPerClick = 1;
+        let cheeseConversionRate = 0; 
+        let autoConversionProgress = 0; 
+        let audioInitialized = false;
+        const CHEESE_CONVERSION_COST = 10;
+        let storeName = "Store"; 
+        let kirbySecretAwarded = false; 
+        const MINIGAME_COST = 5;
+        const MINIGAME_DURATION = 30; // seconds
+
+        // --- Mini-Game State ---
+        let minigameActive = false;
+        let minigameTimeLeft = 0;
+        let minigameMilkCollected = 0;
+        let minigameCheeseCollected = 0;
+        let pailPosition = 50; // Percentage from left
+        const pailSpeed = 5; // Percentage per key press
+        let drops = [];
+        let minigameInterval;
+        let dropSpawnInterval;
+
+
+        // --- Tone.js Sound Synthesis ---
+        const gulpSound = new Tone.MembraneSynth({ pitchDecay: 0.06, octaves: 2.5, oscillator: { type: 'sine' }, envelope: { attack: 0.002, decay: 0.15, sustain: 0.0, release: 0.1 }, volume: -6 });
+        const gulpFilter = new Tone.Filter({ type: 'lowpass', frequency: 700, Q: 0.7 }).toDestination();
+        gulpSound.connect(gulpFilter);
+        const cheeseSound = new Tone.Synth({ oscillator: { type: 'triangle8' }, envelope: { attack: 0.005, decay: 0.1, sustain: 0.05, release: 0.1 }, volume: -8 }).toDestination();
+        const buyUpgradeSound = new Tone.Synth({ oscillator: { type: 'pwm', modulationFrequency: 0.2 }, envelope: { attack: 0.01, decay: 0.15, sustain: 0, release: 0.1}, volume: -10 }).toDestination();
+        const buyCheeseUpgradeSound = new Tone.Synth({ oscillator: { type: 'fatsawtooth', count: 3, spread: 30 }, envelope: { attack: 0.01, decay: 0.2, sustain: 0, release: 0.15 }, volume: -9 }).toDestination();
+        const autoConvertSound = new Tone.PluckSynth({ attackNoise: 0.5, dampening: 7000, resonance: 0.7, volume: -18 }).toDestination();
+        const nameSetSound = new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.01, decay: 0.2, sustain: 0.1, release: 0.2 }, volume: -12 }).toDestination();
+        const storeNameSetSound = new Tone.Synth({ oscillator: { type: 'triangle' }, envelope: { attack: 0.02, decay: 0.3, sustain: 0.05, release: 0.2 }, volume: -10 }).toDestination();
+        const secretFoundSound = new Tone.Synth({ oscillator: { type: 'fmsquare', modulationType: 'sine', harmonicity: 1.01, modulationIndex: 10 }, envelope: { attack: 0.05, decay: 0.3, sustain: 0.1, release: 0.5 }, volume: -5 }).toDestination();
+        const catchDropSound = new Tone.Synth({ oscillator: {type: "sine"}, envelope: {attack: 0.001, decay: 0.05, sustain: 0, release: 0.1}, volume: -15 }).toDestination();
+        const catchBonusSound = new Tone.Synth({ oscillator: {type: "triangle"}, envelope: {attack: 0.01, decay: 0.1, sustain: 0.05, release: 0.2}, volume: -10 }).toDestination();
+        const minigameStartEndSound = new Tone.Synth({ oscillator: {type: "sawtooth"}, envelope: {attack: 0.01, decay: 0.3, sustain: 0, release: 0.1}, volume: -12 }).toDestination();
+
+
+        // --- Upgrade Definitions ---
+        const upgrades = {
+            reinforcedCarton: { name: "Reinforced Carton", baseCost: 50, cost: 50, owned: 0, mpcBonus: 1, type: 'mpc', costCurrency: 'milk', costElement: document.getElementById('reinforcedCarton-cost'), ownedElement: document.getElementById('reinforcedCarton-owned'), buttonElement: document.getElementById('buy-reinforcedCarton'), valueElement: document.querySelector('#upgrade-reinforcedCarton .reinforcedCarton-mpc-value') },
+            ergonomicSpout: { name: "Ergonomic Pour Spout", baseCost: 500, cost: 500, owned: 0, mpcBonus: 5, type: 'mpc', costCurrency: 'milk', costElement: document.getElementById('ergonomicSpout-cost'), ownedElement: document.getElementById('ergonomicSpout-owned'), buttonElement: document.getElementById('buy-ergonomicSpout'), valueElement: document.querySelector('#upgrade-ergonomicSpout .ergonomicSpout-mpc-value') },
+            magicLadle: { name: "Magic Ladle", baseCost: 2500, cost: 2500, owned: 0, mpcBonus: 20, type: 'mpc', costCurrency: 'milk', costElement: document.getElementById('magicLadle-cost'), ownedElement: document.getElementById('magicLadle-owned'), buttonElement: document.getElementById('buy-magicLadle'), valueElement: document.querySelector('#upgrade-magicLadle .magicLadle-mpc-value') },
+            glassOfMilk: { name: "Glass of Milk", baseCost: 10, cost: 10, owned: 0, mpsBonus: 1, type: 'mps', costCurrency: 'milk', costElement: document.getElementById('glassOfMilk-cost'), ownedElement: document.getElementById('glassOfMilk-owned'), buttonElement: document.getElementById('buy-glassOfMilk'), valueElement: document.querySelector('#upgrade-glassOfMilk .glassOfMilk-mps-value') },
+            milkshakeMachine: { name: "Milkshake Machine", baseCost: 100, cost: 100, owned: 0, mpsBonus: 5, type: 'mps', costCurrency: 'milk', costElement: document.getElementById('milkshakeMachine-cost'), ownedElement: document.getElementById('milkshakeMachine-owned'), buttonElement: document.getElementById('buy-milkshakeMachine'), valueElement: document.querySelector('#upgrade-milkshakeMachine .milkshakeMachine-mps-value') },
+            dairyCow: { name: "Dairy Cow", baseCost: 1000, cost: 1000, owned: 0, mpsBonus: 50, type: 'mps', costCurrency: 'milk', costElement: document.getElementById('dairyCow-cost'), ownedElement: document.getElementById('dairyCow-owned'), buttonElement: document.getElementById('buy-dairyCow'), valueElement: document.querySelector('#upgrade-dairyCow .dairyCow-mps-value') },
+            deliveryTruck: { name: "Delivery Truck", baseCost: 10000, cost: 10000, owned: 0, mpsBonus: 250, type: 'mps', costCurrency: 'milk', costElement: document.getElementById('deliveryTruck-cost'), ownedElement: document.getElementById('deliveryTruck-owned'), buttonElement: document.getElementById('buy-deliveryTruck'), valueElement: document.querySelector('#upgrade-deliveryTruck .deliveryTruck-mps-value') },
+            dairyPlant: { name: "Automated Dairy Plant", customName: "My Dairy Plant", baseCost: 50000, cost: 50000, owned: 0, mpsBonus: 1000, type: 'mps', costCurrency: 'milk', costElement: document.getElementById('dairyPlant-cost'), ownedElement: document.getElementById('dairyPlant-owned'), buttonElement: document.getElementById('buy-dairyPlant'), valueElement: document.querySelector('#upgrade-dairyPlant .dairyPlant-mps-value') },
+            autoConverter: { name: "Auto Cheese Converter", baseCost: 5, cost: 5, owned: 0, conversionRateBonus: 1, type: 'autoConvert', costCurrency: 'cheese', costElement: document.getElementById('autoConverter-cost'), ownedElement: document.getElementById('autoConverter-owned'), buttonElement: document.getElementById('buy-autoConverter'), valueElement: document.querySelector('#upgrade-autoConverter .autoConverter-cps-value') },
+            agingRack: { name: "Cheese Aging Rack", baseCost: 10, cost: 10, owned: 0, mpsBonus: 2, type: 'mps', costCurrency: 'cheese', costElement: document.getElementById('agingRack-cost'), ownedElement: document.getElementById('agingRack-owned'), buttonElement: document.getElementById('buy-agingRack'), valueElement: document.querySelector('#upgrade-agingRack .agingRack-mps-value') }, 
+            artisanTools: { name: "Artisan Cheesemaker's Tools", baseCost: 20, cost: 20, owned: 0, mpcBonus: 10, type: 'mpc', costCurrency: 'cheese', costElement: document.getElementById('artisanTools-cost'), ownedElement: document.getElementById('artisanTools-owned'), buttonElement: document.getElementById('buy-artisanTools'), valueElement: document.querySelector('#upgrade-artisanTools .artisanTools-mpc-value') },
+            gourmetRecipes: { name: "Gourmet Cheese Recipes", baseCost: 50, cost: 50, owned: 0, mpsBonus: 20, type: 'mps', costCurrency: 'cheese', costElement: document.getElementById('gourmetRecipes-cost'), ownedElement: document.getElementById('gourmetRecipes-owned'), buttonElement: document.getElementById('buy-gourmetRecipes'), valueElement: document.querySelector('#upgrade-gourmetRecipes .gourmetRecipes-mps-value') },
+            industrialVat: { name: "Industrial Cheese Vat", baseCost: 100, cost: 100, owned: 0, conversionRateBonus: 5, type: 'autoConvert', costCurrency: 'cheese', costElement: document.getElementById('industrialVat-cost'), ownedElement: document.getElementById('industrialVat-owned'), buttonElement: document.getElementById('buy-industrialVat'), valueElement: document.querySelector('#upgrade-industrialVat .industrialVat-cps-value') },
+            caveExpansion: { name: "Cheese Cave Expansion", baseCost: 30, cost: 30, owned: 0, mpsBonus: 10, type: 'mps', costCurrency: 'cheese', costElement: document.getElementById('caveExpansion-cost'), ownedElement: document.getElementById('caveExpansion-owned'), buttonElement: document.getElementById('buy-caveExpansion'), valueElement: document.querySelector('#upgrade-caveExpansion .caveExpansion-mps-value') },
+            goldenLadle: { name: "Golden Ladle", baseCost: 75, cost: 75, owned: 0, mpcBonus: 25, type: 'mpc', costCurrency: 'cheese', costElement: document.getElementById('goldenLadle-cost'), ownedElement: document.getElementById('goldenLadle-owned'), buttonElement: document.getElementById('buy-goldenLadle'), valueElement: document.querySelector('#upgrade-goldenLadle .goldenLadle-mpc-value') }
+        };
+
+        // --- Utility Functions ---
+        function formatNumber(num, isRate = false) {
+            if (num < 1000 && !isRate) return num.toFixed(0);
+            if (num < 1000 && isRate) return num.toFixed(1); 
+            if (num < 1000000) return (num / 1000).toFixed(1) + 'K';
+            if (num < 1000000000) return (num / 1000000).toFixed(1) + 'M';
+            return (num / 1000000000).toFixed(1) + 'B';
+        }
+
+        function showSecretBonusPopup(message) {
+            const popup = document.createElement('div');
+            popup.className = 'secret-bonus-popup';
+            popup.textContent = message;
+            document.body.appendChild(popup);
+            setTimeout(() => {
+                popup.remove();
+            }, 3000); 
+        }
+
+        function updateDisplay() {
+            milkDisplay.textContent = `${formatNumber(Math.floor(milk))} Milk`;
+            cheeseDisplay.textContent = `${formatNumber(cheese)} Cheese`;
+            mpsDisplay.textContent = `${formatNumber(milkPerSecond, true)} MPS`;
+            mpcDisplay.textContent = `${formatNumber(milkPerClick)} MPC`;
+            cpsDisplay.textContent = `${formatNumber(cheeseConversionRate, true)} Potential CPS`; 
+
+            dairyPlantNameDisplay.textContent = upgrades.dairyPlant.customName;
+            if (upgrades.dairyPlant.owned > 0) {
+                renameDairyPlantButton.style.display = 'inline-block';
+            } else {
+                renameDairyPlantButton.style.display = 'none';
+                dairyPlantNamingControls.style.display = 'none'; 
+            }
+            storeTitleDisplay.textContent = storeName;
+
+            for (const key in upgrades) {
+                const upgrade = upgrades[key];
+                const currencyText = upgrade.costCurrency === 'cheese' ? 'Cheese' : 'Milk';
+                upgrade.costElement.textContent = `${formatNumber(Math.ceil(upgrade.cost))} ${currencyText}`;
+                
+                const ownedSpan = upgrade.buttonElement.closest('.upgrade').querySelector(`.effect-description span[id="${key}-owned"]`);
+                if (ownedSpan) { 
+                    ownedSpan.textContent = upgrade.owned;
+                }
+
+                let valueToDisplay;
+                if (upgrade.type === 'mpc') valueToDisplay = upgrade.mpcBonus;
+                else if (upgrade.type === 'mps') valueToDisplay = upgrade.mpsBonus;
+                else if (upgrade.type === 'autoConvert') valueToDisplay = upgrade.conversionRateBonus;
+                
+                if (upgrade.valueElement && valueToDisplay !== undefined) {
+                     upgrade.valueElement.textContent = formatNumber(valueToDisplay, true);
+                }
+
+                let canAfford = false;
+                if (upgrade.costCurrency === 'milk' && milk >= upgrade.cost) canAfford = true;
+                else if (upgrade.costCurrency === 'cheese' && cheese >= upgrade.cost) canAfford = true;
+                
+                upgrade.buttonElement.disabled = !canAfford;
+                upgrade.buttonElement.classList.toggle('disabled', !canAfford);
+            }
+            convertToCheeseButton.disabled = milk < CHEESE_CONVERSION_COST;
+            convertToCheeseButton.classList.toggle('disabled', milk < CHEESE_CONVERSION_COST);
+            playMinigameButton.disabled = milk < MINIGAME_COST || minigameActive;
+            playMinigameButton.classList.toggle('disabled', milk < MINIGAME_COST || minigameActive);
+        }
+
+        function showClickEffect(event, amount) {
+            const clickText = document.createElement('div');
+            clickText.textContent = `+${formatNumber(amount)}`;
+            clickText.classList.add('click-text');
+            const gameRect = gameContainer.getBoundingClientRect();
+            let x, y;
+            if (event.clientX && event.clientY) {
+                 x = event.clientX - gameRect.left; y = event.clientY - gameRect.top;
+            } else {
+                const btnRect = milkCartonButton.getBoundingClientRect();
+                x = (btnRect.left + btnRect.width/2) - gameRect.left; y = (btnRect.top + btnRect.height/2) - gameRect.top;
+            }
+            clickText.style.left = `${x - (clickText.offsetWidth / 2)}px`;
+            clickText.style.top = `${y - 20}px`;
+            gameContainer.appendChild(clickText);
+            clickText.addEventListener('animationend', () => clickText.remove());
+        }
+
+        // --- Event Handlers ---
+        async function handleMilkCartonClick(event) {
+            if (!audioInitialized) { await Tone.start(); audioInitialized = true; }
+            milk += milkPerClick;
+            showClickEffect(event, milkPerClick);
+            if (gulpSound && Tone.context.state === 'running') gulpSound.triggerAttackRelease("G1", "16n", Tone.now());
+            updateDisplay();
+        }
+        milkCartonButton.addEventListener('click', handleMilkCartonClick);
+        milkCartonButton.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault(); handleMilkCartonClick(event);
+                milkCartonButton.style.transform = 'scale(0.93)';
+                setTimeout(() => { milkCartonButton.style.transform = 'scale(1)'; }, 80);
+            }
+        });
+
+        async function handleConvertToCheeseClick() {
+            if (!audioInitialized) { await Tone.start(); audioInitialized = true; }
+            if (milk >= CHEESE_CONVERSION_COST) {
+                milk -= CHEESE_CONVERSION_COST;
+                cheese += 1;
+                if (cheeseSound && Tone.context.state === 'running') cheeseSound.triggerAttackRelease("C5", "16n", Tone.now());
+                updateDisplay();
+            }
+        }
+        convertToCheeseButton.addEventListener('click', handleConvertToCheeseClick);
+
+        async function buyUpgrade(upgradeName) {
+            if (!audioInitialized) { await Tone.start(); audioInitialized = true; }
+            const upgrade = upgrades[upgradeName];
+            let canAfford = false;
+            if (upgrade.costCurrency === 'milk' && milk >= upgrade.cost) canAfford = true;
+            else if (upgrade.costCurrency === 'cheese' && cheese >= upgrade.cost) canAfford = true;
+
+            if (canAfford) {
+                if (upgrade.costCurrency === 'milk') milk -= upgrade.cost;
+                else if (upgrade.costCurrency === 'cheese') cheese -= upgrade.cost;
+                
+                upgrade.owned++;
+                if (upgrade.type === 'mpc') milkPerClick += upgrade.mpcBonus;
+                else if (upgrade.type === 'mps') milkPerSecond += upgrade.mpsBonus;
+                else if (upgrade.type === 'autoConvert') cheeseConversionRate += upgrade.conversionRateBonus;
+                
+                upgrade.cost = Math.ceil(upgrade.baseCost * Math.pow(1.20, upgrade.owned)); 
+
+                if(upgrade.costCurrency === 'cheese' && buyCheeseUpgradeSound && Tone.context.state === 'running'){
+                    buyCheeseUpgradeSound.triggerAttackRelease("A4", "8n", Tone.now());
+                } else if (buyUpgradeSound && Tone.context.state === 'running'){
+                    buyUpgradeSound.triggerAttackRelease("C4", "8n", Tone.now());
+                }
+                updateDisplay();
+            }
+        }
+
+        for (const key in upgrades) {
+            if (upgrades[key].buttonElement) {
+                 upgrades[key].buttonElement.addEventListener('click', () => buyUpgrade(key));
+            } else { console.warn(`Button element for upgrade '${key}' not found.`); }
+        }
+        
+        renameDairyPlantButton.addEventListener('click', () => {
+            dairyPlantNamingControls.style.display = 'flex';
+            dairyPlantNameInput.value = upgrades.dairyPlant.customName;
+            dairyPlantNameInput.focus();
+        });
+
+        async function savePlantName() {
+            if (!audioInitialized) { await Tone.start(); audioInitialized = true; }
+            const newName = dairyPlantNameInput.value.trim();
+            if (newName) {
+                upgrades.dairyPlant.customName = newName;
+                if (nameSetSound && Tone.context.state === 'running') nameSetSound.triggerAttackRelease("E5", "8n", Tone.now());
+            }
+            dairyPlantNamingControls.style.display = 'none';
+            updateDisplay();
+        }
+        saveDairyPlantNameButton.addEventListener('click', savePlantName);
+        dairyPlantNameInput.addEventListener('keypress', (event) => { if (event.key === 'Enter') savePlantName(); });
+
+        renameStoreButton.addEventListener('click', () => {
+            storeNamingControls.style.display = 'flex';
+            storeNameInput.value = storeName;
+            storeNameInput.focus();
+        });
+
+        async function saveStoreName() {
+            if (!audioInitialized) { await Tone.start(); audioInitialized = true; }
+            const newName = storeNameInput.value.trim();
+            if (newName) {
+                storeName = newName;
+                 if (storeNameSetSound && Tone.context.state === 'running') storeNameSetSound.triggerAttackRelease("G4", "4n", Tone.now()); 
+                if (newName.toLowerCase() === "kirby milk and cheese" && !kirbySecretAwarded) {
+                    cheese += 1000;
+                    kirbySecretAwarded = true; 
+                    if (secretFoundSound && Tone.context.state === 'running') secretFoundSound.triggerAttackRelease("C6", "2n", Tone.now()); 
+                    showSecretBonusPopup("Kirby Secret Found! +1000 Cheese!");
+                }
+            }
+            storeNamingControls.style.display = 'none';
+            updateDisplay();
+        }
+        saveStoreNameButton.addEventListener('click', saveStoreName);
+        storeNameInput.addEventListener('keypress', (event) => { if(event.key === 'Enter') saveStoreName(); });
+
+        // --- Mini-Game Logic ---
+        function showMinigame() {
+            if (milk < MINIGAME_COST || minigameActive) return;
+            milk -= MINIGAME_COST;
+            minigameActive = true;
+            minigameOverlay.style.display = 'flex';
+            minigameStartButton.style.display = 'block';
+            minigameCloseButton.style.display = 'none';
+            minigameMessage.textContent = `Press Start to Play (Cost: ${MINIGAME_COST} Milk)`;
+            minigameMilkCollected = 0;
+            minigameCheeseCollected = 0;
+            minigameScoreDisplay.textContent = "Milk: 0 | Cheese: 0";
+            minigameTimerDisplay.textContent = `Time: ${MINIGAME_DURATION}s`;
+            updateDisplay(); // Reflect milk cost
+        }
+        playMinigameButton.addEventListener('click', showMinigame);
+
+        async function startMinigame() {
+            if (!audioInitialized) { await Tone.start(); audioInitialized = true; }
+            minigameStartButton.style.display = 'none';
+            minigameMessage.textContent = "Catch the drops!";
+            minigameTimeLeft = MINIGAME_DURATION;
+            pailPosition = 50;
+            pailElement.style.left = `${pailPosition}%`;
+            drops = [];
+            minigameCanvas.innerHTML = ''; // Clear previous drops
+            minigameCanvas.appendChild(pailElement); // Re-add pail
+            if (minigameStartEndSound && Tone.context.state === 'running') minigameStartEndSound.triggerAttackRelease("C5", "8n", Tone.now());
+
+
+            minigameInterval = setInterval(minigameLoop, 50); // Game loop runs every 50ms
+            dropSpawnInterval = setInterval(spawnDrop, 700); // Spawn a drop roughly every 0.7 seconds
+        }
+        minigameStartButton.addEventListener('click', startMinigame);
+
+        function minigameLoop() {
+            minigameTimeLeft -= 0.05; // Since loop is 50ms
+            minigameTimerDisplay.textContent = `Time: ${Math.max(0, minigameTimeLeft).toFixed(1)}s`;
+
+            moveDrops();
+            checkCollisions();
+
+            if (minigameTimeLeft <= 0) {
+                endMinigame();
+            }
+        }
+
+        function spawnDrop() {
+            if (!minigameActive) return;
+            const drop = document.createElement('div');
+            const isCheese = Math.random() < 0.15; // 15% chance for cheese
+            drop.className = isCheese ? 'cheese-drop' : 'milk-drop';
+            drop.style.left = `${Math.random() * 90}%`; // Random horizontal position (0-90% to stay within canvas)
+            drop.style.top = `0px`;
+            minigameCanvas.appendChild(drop);
+            drops.push({ element: drop, type: isCheese ? 'cheese' : 'milk', y: 0 });
+        }
+
+        function moveDrops() {
+            const dropSpeed = 5; // Pixels per game tick
+            drops = drops.filter(drop => {
+                drop.y += dropSpeed;
+                drop.element.style.top = `${drop.y}px`;
+                if (drop.y > minigameCanvas.offsetHeight) {
+                    drop.element.remove();
+                    return false; // Remove if off-screen
+                }
+                return true;
+            });
+        }
+
+        function checkCollisions() {
+            const pailRect = pailElement.getBoundingClientRect();
+            drops = drops.filter(drop => {
+                const dropRect = drop.element.getBoundingClientRect();
+                // Simple AABB collision detection
+                if (pailRect.left < dropRect.right &&
+                    pailRect.right > dropRect.left &&
+                    pailRect.top < dropRect.bottom &&
+                    pailRect.bottom > dropRect.top) {
+                    
+                    if (drop.type === 'milk') {
+                        minigameMilkCollected++;
+                        if (catchDropSound && Tone.context.state === 'running') catchDropSound.triggerAttackRelease("A5", "32n", Tone.now());
+                    } else { // Cheese
+                        minigameCheeseCollected++;
+                         if (catchBonusSound && Tone.context.state === 'running') catchBonusSound.triggerAttackRelease("E6", "16n", Tone.now());
+                    }
+                    minigameScoreDisplay.textContent = `Milk: ${minigameMilkCollected} | Cheese: ${minigameCheeseCollected}`;
+                    drop.element.remove();
+                    return false; // Remove caught drop
+                }
+                return true;
+            });
+        }
+
+        function endMinigame() {
+            minigameActive = false;
+            clearInterval(minigameInterval);
+            clearInterval(dropSpawnInterval);
+            if (minigameStartEndSound && Tone.context.state === 'running') minigameStartEndSound.triggerAttackRelease("C4", "8n", Tone.now());
+
+            minigameMessage.textContent = `Game Over! You collected ${minigameMilkCollected} Milk and ${minigameCheeseCollected} Cheese.`;
+            milk += minigameMilkCollected;
+            cheese += minigameCheeseCollected;
+            minigameCloseButton.style.display = 'block';
+            updateDisplay();
+        }
+
+        minigameCloseButton.addEventListener('click', () => {
+            minigameOverlay.style.display = 'none';
+            drops.forEach(d => d.element.remove()); // Clear any remaining drops visually
+            drops = [];
+            updateDisplay(); // Ensure main game UI is up to date
+        });
+
+        // Pail Controls
+        document.addEventListener('keydown', (event) => {
+            if (!minigameActive) return;
+            const canvasWidth = minigameCanvas.offsetWidth;
+            const pailWidth = pailElement.offsetWidth;
+            
+            if (event.key === 'ArrowLeft') {
+                pailPosition = Math.max(0, pailPosition - pailSpeed);
+            } else if (event.key === 'ArrowRight') {
+                // Calculate max position carefully to keep pail within canvas
+                const maxPailPercent = ((canvasWidth - pailWidth) / canvasWidth) * 100;
+                pailPosition = Math.min(maxPailPercent, pailPosition + pailSpeed);
+            }
+            pailElement.style.left = `${pailPosition}%`;
+        });
+
+
+        // --- Game Loop (Main) ---
+        function gameTick() {
+            milk += milkPerSecond / 10;
+
+            if (cheeseConversionRate > 0) { 
+                autoConversionProgress += cheeseConversionRate / 10; 
+                
+                while (autoConversionProgress >= 1 && milk >= CHEESE_CONVERSION_COST) {
+                    milk -= CHEESE_CONVERSION_COST;
+                    cheese += 1;
+                    autoConversionProgress -= 1; 
+                    
+                    if (autoConvertSound && Tone.context.state === 'running') {
+                        autoConvertSound.triggerAttackRelease("C2", "32n", Tone.now() + (Math.random() * 0.02 - 0.01)); 
+                    }
+                }
+            }
+            updateDisplay();
+        }
+
+        // --- Initialization ---
+        function initializeGame() {
+            for (const key in upgrades) {
+                const upgrade = upgrades[key];
+                const ownedSpan = upgrade.buttonElement.closest('.upgrade').querySelector(`.effect-description span[id="${key}-owned"]`);
+                 if (ownedSpan) {
+                     ownedSpan.textContent = upgrade.owned;
+                 }
+            }
+            updateDisplay(); 
+            setInterval(gameTick, 100);
+            if (!document.getElementById('milk-carton-button')) {
+                 console.warn("Milk carton button element not found.");
+            }
+        }
+        document.addEventListener('DOMContentLoaded', initializeGame);
+    </script>
+</body>
+</html>
+

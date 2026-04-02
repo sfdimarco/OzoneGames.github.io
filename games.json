@@ -9,6 +9,19 @@
   "games": [
 
     {
+      "id": "frogfarmer",
+      "title": "Frog Farmer",
+      "emoji": "🐸",
+      "desc": "Run a farm, sell crops to animal customers, squash bugs, and expand your land. A full day/night cycle — don't fall asleep at the plow!",
+      "file": "games/frogfarmer.html",
+      "accent": "green",
+      "madeByStudents": true,
+      "isNew": true,
+      "tags": ["Farming Sim", "Economy", "Day Cycle"],
+      "notes": "Students designed the customer economy — which crops should be rare, which customers pay more, how bugs slow you down. Great intro to game balance and systems thinking."
+    },
+
+    {
       "id": "bigbackattack",
       "title": "Big Back Attack",
       "emoji": "🍕",
@@ -54,6 +67,66 @@
       "madeByStudents": true,
       "tags": ["Card Game", "AI Opponent", "Logic"],
       "notes": "Writing the AI was the moment several students understood what an algorithm actually is. One student said 'oh, it's just a list of if-statements that are really good.' Exactly."
+    },
+
+    {
+      "id": "buffedflappybird",
+      "title": "Sonic Wave: Ultimate Drip Edition",
+      "emoji": "🎵",
+      "desc": "A student-built Flappy Bird remix cranked up to maximum drip — obstacles, style, and speed turned all the way up.",
+      "file": "games/buffedflappybird.html",
+      "accent": "cyan",
+      "madeByStudents": true,
+      "tags": ["Flappy Bird", "Remix", "Timing"],
+      "notes": "Classic Flappy Bird mechanics with student-designed flair. They refused to ship it without more style. The name alone tells you everything about the classroom energy that day."
+    },
+
+    {
+      "id": "crabathon",
+      "title": "Crabathon Clicker",
+      "emoji": "🦀",
+      "desc": "An incremental clicker starring crabs. Click to crab. Upgrade to crab faster. There is no escape from the crab.",
+      "file": "games/crabathon.html",
+      "accent": "red",
+      "madeByStudents": true,
+      "tags": ["Clicker", "Incremental", "Crabs"],
+      "notes": "Built entirely by students who were obsessed with the crab emoji. Quietly teaches exponential growth. The password to the games portal is 'crabathon' — that's how iconic this game became."
+    },
+
+    {
+      "id": "cheeseplateclicker",
+      "title": "Big Back Attack: Syrup Rays",
+      "emoji": "🧀",
+      "desc": "A student-modded version of Big Back Attack with custom syrup-ray power-ups and new chaos mechanics.",
+      "file": "games/cheeseplateclicker.html",
+      "accent": "yellow",
+      "madeByStudents": true,
+      "tags": ["Breakout", "Mod", "Power-ups"],
+      "notes": "A student took the original Big Back Attack and went wild with it — new power-ups, new name, new chaos. This is exactly what you want to see: kids treating code like clay."
+    },
+
+    {
+      "id": "milkcartonv2",
+      "title": "Milk & Cheese Clicker Tycoon",
+      "emoji": "🥛",
+      "desc": "A clicker tycoon about dairy production. Buy upgrades, automate your factory, and become the richest cheese baron in town.",
+      "file": "games/milkcartonv2.html",
+      "accent": "cyan",
+      "madeByStudents": true,
+      "tags": ["Clicker", "Tycoon", "Dairy"],
+      "notes": "Version 2 of the Milk Carton Factory — students wanted idle mechanics and an upgrade shop. They spent a whole class debating what each upgrade should cost. Best economics lesson of the year."
+    },
+
+    {
+      "id": "neuralthing",
+      "title": "Neural Evolution Sandbox",
+      "emoji": "🧠",
+      "desc": "Watch virtual creatures evolve in real time. Adjust mutation rates, survival rules, and watch natural selection play out in your browser.",
+      "file": "games/neuralthing.html",
+      "accent": "purple",
+      "madeByStudents": false,
+      "tags": ["Simulation", "Evolution", "Neural"],
+      "notes": "A sandbox for exploring emergent behavior and evolution. Great conversation starter: 'why do some creatures survive and others don't?' Pairs well with a brief intro to natural selection."
     },
 
     {

@@ -1,0 +1,1518 @@
+﻿ <!DOCTYPE html>
+<html lang="en">​​
+<head>
+   <meta charset="UTF-8">
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <title>Crabathon Clicker</title>
+  
+   <!-- Load Tailwind CSS -->
+   <script src="https://cdn.tailwindcss.com"></script>
+  
+   <!-- Load Tone.js for music -->
+   <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.min.js"></script>
+
+
+   <!-- Load Google Font -->
+   <link rel="preconnect" href="https://fonts.googleapis.com">
+   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+   <style>
+       /* Use the Inter font family */
+       body {
+           font-family: 'Inter', sans-serif;
+       }
+
+
+       /* Crab styling */
+       #crab {
+           font-size: 8rem; /* Make the crab emoji large */
+           cursor: pointer;
+           user-select: none; /* Prevent text selection on click */
+           transition: transform 0.1s ease-in-out;
+       }
+
+
+       /* Click animation for the crab */
+       #crab:active {
+           transform: scale(0.95);
+       }
+
+
+       /* Glitch effect */
+       .glitched {
+           animation: glitchAnim 0.1s infinite steps(1);
+       }
+
+
+       @keyframes glitchAnim {
+           0% {
+               transform: translate(0, 0);
+               text-shadow: 2px 2px 0 #00ffff, -2px -2px 0 #ff00ff;
+           }
+           50% {
+               transform: translate(2px, -2px);
+               text-shadow: -2px 2px 0 #00ffff, 2px -2px 0 #ff00ff;
+           }
+           100% {
+               transform: translate(-2px, 2px);
+               text-shadow: 2px -2px 0 #00ffff, -2px 2px 0 #ff00ff;
+           }
+       }
+
+
+       /* Container for click feedback numbers */
+       #click-feedback-container {
+           position: relative;
+           height: 50px; /* Give space for numbers to float */
+           pointer-events: none; /* Let clicks pass through to the crab */
+       }
+
+
+       /* Crab travel animation */
+       .crab-feedback {
+           position: absolute;
+           left: 50%;
+           transform: translateX(-50%);
+           font-size: 2rem; /* Smaller than the main crab */
+           opacity: 1;
+           pointer-events: none;
+           animation: crabTravel 1.2s ease-out forwards;
+       }
+
+
+       /* Keyframes for the crab travel */
+       @keyframes crabTravel {
+           from {
+               opacity: 1;
+               transform: translate(-50%, 0) scale(1);
+           }
+           to {
+               opacity: 0;
+               /* Go much higher and shrink */
+               transform: translate(-50%, -250px) scale(0.5);
+           }
+       }
+
+
+       /* Mini-game canvas styling */
+       #miniGameCanvas {
+           background-color: #7dd3fc; /* Sky blue */
+           border-radius: 8px;
+           box-shadow: inset 0 0 10px rgba(0,0,0,0.2);
+       }
+
+
+       /* Corrupt Mode Styling */
+       .corrupt-mode {
+           filter: invert(1);
+           background-color: #fff; /* Inverts to black */
+       }
+
+
+       /* Toast Notification Styling */
+       .toast-notification {
+           position: fixed;
+           top: 20px;
+           right: 20px;
+           background-color: #2dd4bf; /* Teal color */
+           color: #1a202c; /* Dark text */
+           padding: 1rem 1.5rem;
+           border-radius: 8px;
+           font-weight: 600;
+           box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+           transform: translateX(120%);
+           transition: transform 0.5s ease-in-out;
+           z-index: 200;
+       }
+
+
+       .toast-notification.show {
+           transform: translateX(0);
+       }
+      
+   </style>
+</head>
+<body class="bg-gray-900 text-white min-h-screen p-4 py-8">
+
+
+   <div id="game-container" class="bg-gray-800 p-6 sm:p-8 rounded-xl shadow-2xl w-full max-w-md text-center relative overflow-hidden mx-auto">
+      
+       <!-- Music Toggle Button -->
+       <button id="toggle-music-btn" class="absolute top-4 right-4 text-2xl p-2 rounded-full hover:bg-gray-700 transition-colors duration-200 z-10">
+           
+       </button>
+
+
+       <!-- Title -->
+       <h1 class="text-4xl font-bold text-cyan-400 mb-2">Crabathon</h1>
+       <p class="text-gray-400 mb-4">Click the crab to earn points!</p>
+      
+       <!-- Loading State -->
+       <div id="loading-state" class="text-lg text-yellow-400 my-4">
+           Connecting to the server...
+       </div>
+
+
+       <!-- Score Display -->
+       <div class="my-6">
+           <div id="score-display" class="text-5xl font-bold">0</div>
+           <div class="text-gray-400 text-lg">Points</div>
+           <div id="sps-display" class="text-sm text-cyan-300 mt-1">&nbsp;</div>
+       </div>
+
+
+       <!-- The Crab -->
+       <div id="crab" class="my-4">
+           
+       </div>
+      
+       <!-- Click Feedback Area -->
+       <div id="click-feedback-container" class="-mt-24">
+           <!-- Flying crabs will appear here -->
+       </div>
+
+
+       <!-- Upgrades Section -->
+       <div class="space-y-3 max-h-60 overflow-y-auto p-1">
+           <h2 class="text-2xl font-semibold border-b border-gray-700 pb-2 mb-3 sticky top-0 bg-gray-800 z-10">Upgrades</h2>
+          
+           <!-- Upgrade 1: Stronger Click -->
+           <button id="upgrade-clicker" class="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-semibold p-3 rounded-lg shadow-lg transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed">
+               Stronger Click (Lvl <span id="clicker-level">1</span>) <br> <span class="text-xs font-normal">Cost: <span id="clicker-cost">10</span> Points</span>
+           </button>
+          
+           <!-- Upgrade 2: Auto Clicker -->
+           <button id="upgrade-autoclicker" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold p-3 rounded-lg shadow-lg transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed">
+               Auto Clicker (Lvl <span id="autoclicker-level">0</span>) <br> <span class="text-xs font-normal">Cost: <span id="autoclicker-cost">50</span> Points</span>
+           </button>
+
+
+           <!-- Upgrade 3: Point Generator -->
+           <button id="upgrade-generator" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold p-3 rounded-lg shadow-lg transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed">
+               Point Generator (Lvl <span id="generator-level">0</span>) <br> <span class="text-xs font-normal">Cost: <span id="generator-cost">250</span> Points</span>
+           </button>
+          
+           <!-- Upgrade 4: Mini-Game Bonus -->
+           <button id="upgrade-gamebonus" class="w-full bg-yellow-500 hover:bg-yellow-400 text-gray-900 font-semibold p-3 rounded-lg shadow-lg transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed">
+               Mini-Game Bonus (Lvl <span id="gamebonus-level">0</span>) <br> <span class="text-xs font-normal">Cost: <span id="gamebonus-cost">1000</span> Points</span>
+           </button>
+
+
+           <!-- Upgrade 5: Big Generator -->
+           <button id="upgrade-biggenerator" class="w-full bg-gray-600 hover:bg-gray-500 text-white font-semibold p-3 rounded-lg shadow-lg transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed">
+               Big Generator (Lvl <span id="biggenerator-level">0</span>) <br> <span class="text-xs font-normal">Cost: <span id="biggenerator-cost">5000</span> Points</span>
+           </button>
+
+
+           <!-- Upgrade 6: Synergy Clicks -->
+           <button id="upgrade-synergy" class="w-full bg-indigo-500 hover:bg-indigo-400 text-white font-semibold p-3 rounded-lg shadow-lg transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed">
+               Synergy Clicks (Lvl <span id="synergy-level">0</span>) <br> <span class="text-xs font-normal">Cost: <span id="synergy-cost">25000</span> Points</span>
+           </button>
+
+
+           <!-- Upgrade 7: Mega Generator -->
+           <button id="upgrade-megagenerator" class="w-full bg-pink-600 hover:bg-pink-500 text-white font-semibold p-3 rounded-lg shadow-lg transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed">
+               Mega Generator (Lvl <span id="megagenerator-level">0</span>) <br> <span class="text-xs font-normal">Cost: <span id="megagenerator-cost">100000</span> Points</span>
+           </button>
+
+
+           <!-- Upgrade 8: Click Boost -->
+           <button id="upgrade-clickboost" class="w-full bg-amber-500 hover:bg-amber-400 text-gray-900 font-semibold p-3 rounded-lg shadow-lg transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed">
+               Click Boost (Lvl <span id="clickboost-level">0</span>) <br> <span class="text-xs font-normal">Cost: <span id="clickboost-cost">500000</span> Points</span>
+           </button>
+
+
+           <!-- Upgrade 9: Global Multiplier -->
+           <button id="upgrade-multiplier" class="w-full bg-purple-800 hover:bg-purple-700 text-white font-semibold p-3 rounded-lg shadow-lg transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed">
+               Global Multiplier (Lvl <span id="multiplier-level">0</span>) <br> <span class="text-xs font-normal">Cost: <span id="multiplier-cost">1,000,000</span> Points</span>
+           </button>
+
+
+           <!-- Glitch Crab Upgrade (hidden by default) -->
+           <button id="upgrade-glitchcrab" class="w-full bg-black border-2 border-dashed border-cyan-400 hover:border-fuchsia-500 text-white font-semibold p-3 rounded-lg shadow-lg transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed hidden">
+               Glitch Crab (Lvl <span id="glitchcrab-level">0</span>) <br> <span class="text-xs font-normal">Cost: <span id="glitchcrab-cost">1 Qa</span> Points</span>
+           </button>
+
+
+       </div>
+
+
+       <!-- Mini-Game Section -->
+       <div class="mt-8">
+           <h2 class="text-2xl font-semibold border-b border-gray-700 pb-2 mb-3">Mini-Game</h2>
+           <button id="play-minigame-btn" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold p-3 rounded-lg shadow-lg transition duration-200">
+               Play Crab Jump!
+           </button>
+       </div>
+
+
+       <!-- Cheat Code Section -->
+       <div class="mt-8">
+           <h2 class="text-2xl font-semibold border-b border-gray-700 pb-2 mb-3">Enter Code</h2>
+           <div class="flex space-x-2">
+               <input type="text" id="code-input" placeholder="Enter code..." class="flex-1 p-2 rounded-lg bg-gray-700 border border-gray-600 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500">
+               <button id="submit-code-btn" class="bg-yellow-500 hover:bg-yellow-400 text-gray-900 font-semibold p-2 rounded-lg shadow-lg transition duration-200">
+                   Submit
+               </button>
+           </div>
+           <p id="code-message" class="text-sm text-gray-400 mt-2 h-4">&nbsp;</p>
+       </div>
+
+
+       <!-- NEW: Secret Code Section (hidden by default) -->
+       <div id="secret-code-section" class="mt-8 hidden">
+           <h2 class="text-2xl font-semibold border-b border-fuchsia-500 pb-2 mb-3 text-fuchsia-400">???</h2>
+           <div class="flex space-x-2">
+               <input type="text" id="secret-code-input" placeholder="???" class="flex-1 p-2 rounded-lg bg-gray-700 border border-fuchsia-500 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-fuchsia-500">
+               <button id="submit-secret-code-btn" class="bg-fuchsia-500 hover:bg-fuchsia-400 text-white font-semibold p-2 rounded-lg shadow-lg transition duration-200">
+                   Submit
+               </button>
+           </div>
+           <p id="secret-code-message" class="text-sm text-fuchsia-400 mt-2 h-4">&nbsp;</p>
+       </div>
+
+
+
+
+       <!-- Game Modes & Reset Section -->
+       <div class="mt-8 border-t border-gray-700 pt-6 space-y-3">
+            <!-- Corrupt Mode Button -->
+           <button id="corrupt-mode-btn" class="w-full bg-purple-600 hover:bg-purple-500 text-white font-semibold p-3 rounded-lg shadow-lg transition duration-200">
+               Play in Corrupt Mode
+           </button>
+           <!-- Reset Game Button -->
+           <button id="reset-game-btn" class="w-full bg-red-700 hover:bg-red-600 text-white font-semibold p-3 rounded-lg shadow-lg transition duration-200">
+               Reset Game Progress
+           </button>
+       </div>
+
+
+       <!-- User ID Display -->
+       <div id="user-id-display" class="text-xs text-gray-500 mt-6"></div>
+
+
+   </div>
+
+
+   <!-- Mini-Game Overlay -->
+   <div id="mini-game-overlay" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 hidden">
+       <div class="bg-gray-800 p-6 rounded-xl shadow-2xl text-center max-w-lg w-full">
+           <h3 class="text-3xl font-bold text-indigo-400 mb-4">Crab Jump!</h3>
+           <canvas id="miniGameCanvas" width="400" height="200" class="mx-auto block"></canvas>
+           <div class="mt-4 text-lg">
+               Score: <span id="miniGameScoreDisplay" class="font-bold text-yellow-300">0</span>
+           </div>
+           <button id="quit-minigame-btn" class="mt-6 bg-red-600 hover:bg-red-500 text-white font-semibold p-3 rounded-lg shadow-lg transition duration-200">
+               Quit Mini-Game
+           </button>
+       </div>
+   </div>
+
+
+   <!-- Mini-Game Over Modal -->
+   <div id="minigame-over-modal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[100] hidden">
+       <div class="bg-gray-800 p-8 rounded-xl shadow-2xl text-center w-full max-w-sm">
+           <h3 class="text-3xl font-bold text-indigo-400 mb-4">Game Over!</h3>
+           <p id="minigame-over-message" class="text-lg text-white mb-6">You earned 100 points!</p>
+           <button id="minigame-over-ok" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold p-3 rounded-lg shadow-lg transition duration-200">
+               Great!
+           </button>
+       </div>
+   </div>
+
+
+   <!-- Game Beat Modal -->
+   <div id="game-beat-modal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[100] hidden">
+       <div class="bg-gray-800 p-8 rounded-xl shadow-2xl text-center w-full max-w-sm">
+           <h3 class="text-3xl font-bold text-emerald-400 mb-4">Congratulations!</h3>
+           <p class="text-lg text-white mb-6">You beat the game by reaching 1 Trillion Points!</p>
+           <p class="text-white text-3xl mb-4"></p>
+           <button id="game-beat-ok" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold p-3 rounded-lg shadow-lg transition duration-200">
+               Wow!
+           </button>
+       </div>
+   </div>
+
+
+   <!-- Reset Confirmation Modal -->
+   <div id="reset-modal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[100] hidden">
+       <div class="bg-gray-800 p-8 rounded-xl shadow-2xl text-center w-full max-w-sm">
+           <h3 class="text-3xl font-bold text-red-500 mb-4">Are you sure?</h3>
+           <p class="text-lg text-white mb-6">This will permanently reset all your progress, points, and upgrades. This cannot be undone!</p>
+           <div class="flex space-x-4">
+               <button id="reset-cancel-btn" class="w-full bg-gray-600 hover:bg-gray-500 text-white font-semibold p-3 rounded-lg shadow-lg transition duration-200">
+                   Cancel
+               </button>
+               <button id="reset-confirm-btn" class="w-full bg-red-600 hover:bg-red-500 text-white font-semibold p-3 rounded-lg shadow-lg transition duration-200">
+                   Yes, Reset
+               </button>
+           </div>
+       </div>
+   </div>
+
+
+
+
+   <!-- Firebase SDK -->
+   <script type="module">
+       // Import Firebase modules
+       import { initializeApp, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+       import {
+           getAuth,
+           signInAnonymously,
+           signInWithCustomToken,
+           onAuthStateChanged
+       } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+       import {
+           getFirestore,
+           doc,
+           setDoc,
+           onSnapshot
+       } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+
+       // --- Firebase & App Configuration ---
+      
+       const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-crabathon-app';
+       const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+       const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+
+       let app, auth, db;
+       let userId = null;
+       let dbRef = null;
+       let unsubscribe = null;
+       let isSaving = false;
+      
+       // --- Default Game State ---
+       const defaultGameState = {
+           points: 0,
+           clicker: { level: 1, cost: 10, clickBonus: 1 },
+           autoClicker: { level: 0, cost: 50, sps: 0.1 },
+           generator: { level: 0, cost: 250, sps: 1 },
+           gameBonus: { level: 0, cost: 1000, bonus: 1 },
+           bigGenerator: { level: 0, cost: 5000, sps: 10 },
+           synergy: { level: 0, cost: 25000, percent: 0.001 }, // 0.1% per level
+           megaGenerator: { level: 0, cost: 100000, sps: 50 },
+           clickBoost: { level: 0, cost: 500000, clickBonus: 100 },
+           multiplier: { level: 0, cost: 1000000, multiplier: 2.0 }, // 2x per level
+           glitchCrab: { level: 0, cost: 1_000_000_000_000_000, multiplier: 1000 }, // 1 Quadrillion
+           codeApplied: false,
+           codeBonus: 0,
+           gameBeaten: false, // Track if the game has been "beaten"
+           secretCodeApplied: false // NEW
+       };
+
+
+       // --- Active Game State ---
+       let gameState = JSON.parse(JSON.stringify(defaultGameState)); // Start with a deep copy
+
+
+       // --- Calculated Game Values ---
+       let calculatedSPS = 0; // Points Per Second
+       let calculatedSPC = 1; // Points Per Click
+
+
+       // --- Runtime State ---
+       let isCorruptMode = false;
+
+
+       // --- Music State ---
+       let musicInitialized = false;
+       let musicPlaying = false;
+       let normalMusicLoop, creepyMusicLoop;
+       let normalSynth, creepySynth;
+
+
+       // --- DOM Elements ---
+       const gameContainer = document.getElementById('game-container');
+       const scoreDisplay = document.getElementById('score-display');
+       const spsDisplay = document.getElementById('sps-display');
+       const crab = document.getElementById('crab');
+       const feedbackContainer = document.getElementById('click-feedback-container');
+       const loadingState = document.getElementById('loading-state');
+       const userIdDisplay = document.getElementById('user-id-display');
+
+
+       // Stronger Click
+       const upgradeClicker = document.getElementById('upgrade-clicker');
+       const clickerLevelSpan = document.getElementById('clicker-level');
+       const clickerCostSpan = document.getElementById('clicker-cost');
+       // Auto Clicker
+       const upgradeAutoClicker = document.getElementById('upgrade-autoclicker');
+       const autoClickerLevelSpan = document.getElementById('autoclicker-level');
+       const autoClickerCostSpan = document.getElementById('autoclicker-cost');
+       // Point Generator
+       const upgradeGenerator = document.getElementById('upgrade-generator');
+       const generatorLevelSpan = document.getElementById('generator-level');
+       const generatorCostSpan = document.getElementById('generator-cost');
+       // Mini-Game Bonus
+       const upgradeGameBonus = document.getElementById('upgrade-gamebonus');
+       const gameBonusLevelSpan = document.getElementById('gamebonus-level');
+       const gameBonusCostSpan = document.getElementById('gamebonus-cost');
+       // Big Generator
+       const upgradeBigGenerator = document.getElementById('upgrade-biggenerator');
+       const bigGeneratorLevelSpan = document.getElementById('biggenerator-level');
+       const bigGeneratorCostSpan = document.getElementById('biggenerator-cost');
+       // Synergy Clicks
+       const upgradeSynergy = document.getElementById('upgrade-synergy');
+       const synergyLevelSpan = document.getElementById('synergy-level');
+       const synergyCostSpan = document.getElementById('synergy-cost');
+       // Mega Generator
+       const upgradeMegaGenerator = document.getElementById('upgrade-megagenerator');
+       const megaGeneratorLevelSpan = document.getElementById('megagenerator-level');
+       const megaGeneratorCostSpan = document.getElementById('megagenerator-cost');
+       // Click Boost
+       const upgradeClickBoost = document.getElementById('upgrade-clickboost');
+       const clickBoostLevelSpan = document.getElementById('clickboost-level');
+       const clickBoostCostSpan = document.getElementById('clickboost-cost');
+       // Global Multiplier
+       const upgradeMultiplier = document.getElementById('upgrade-multiplier');
+       const multiplierLevelSpan = document.getElementById('multiplier-level');
+       const multiplierCostSpan = document.getElementById('multiplier-cost');
+
+
+       // Glitch Crab Elements
+       const upgradeGlitchCrab = document.getElementById('upgrade-glitchcrab');
+       const glitchCrabLevelSpan = document.getElementById('glitchcrab-level');
+       const glitchCrabCostSpan = document.getElementById('glitchcrab-cost');
+
+
+       // Code Elements
+       const codeInput = document.getElementById('code-input');
+       const submitCodeBtn = document.getElementById('submit-code-btn');
+       const codeMessage = document.getElementById('code-message');
+
+
+       // NEW: Secret Code Elements
+       const secretCodeSection = document.getElementById('secret-code-section');
+       const secretCodeInput = document.getElementById('secret-code-input');
+       const submitSecretCodeBtn = document.getElementById('submit-secret-code-btn');
+       const secretCodeMessage = document.getElementById('secret-code-message');
+
+
+       // Mini-Game Elements
+       const playMinigameBtn = document.getElementById('play-minigame-btn');
+       const miniGameOverlay = document.getElementById('mini-game-overlay');
+       const quitMinigameBtn = document.getElementById('quit-minigame-btn');
+       const miniGameCanvas = document.getElementById('miniGameCanvas');
+       const miniGameScoreDisplay = document.getElementById('miniGameScoreDisplay');
+       const minigameOverModal = document.getElementById('minigame-over-modal');
+       const minigameOverMessage = document.getElementById('minigame-over-message');
+       const minigameOverOk = document.getElementById('minigame-over-ok');
+
+
+       // Game Beat Modal Elements
+       const gameBeatModal = document.getElementById('game-beat-modal');
+       const gameBeatOk = document.getElementById('game-beat-ok');
+
+
+       // Reset Modal Elements
+       const resetGameBtn = document.getElementById('reset-game-btn');
+       const resetModal = document.getElementById('reset-modal');
+       const resetConfirmBtn = document.getElementById('reset-confirm-btn');
+       const resetCancelBtn = document.getElementById('reset-cancel-btn');
+
+
+       // Corrupt Mode Button
+       const corruptModeBtn = document.getElementById('corrupt-mode-btn');
+
+
+       // Music Button
+       const toggleMusicBtn = document.getElementById('toggle-music-btn');
+
+
+
+
+       // --- Music Functions ---
+       async function initAudioContext() {
+           if (musicInitialized) return;
+           if (typeof Tone === 'undefined') {
+               console.error("Tone.js not loaded!");
+               return;
+           }
+           await Tone.start();
+           console.log("AudioContext started");
+           musicInitialized = true;
+       }
+
+
+       function setupMusic() {
+           if (typeof Tone === 'undefined') return;
+          
+           // 1. Normal Music
+           normalSynth = new Tone.MonoSynth({
+               oscillator: { type: "square" },
+               envelope: { attack: 0.01, decay: 0.1, sustain: 0.2, release: 0.1 },
+               filterEnvelope: { attack: 0.01, decay: 0.05, sustain: 0.1, release: 0.5, baseFrequency: 300, octaves: 4 }
+           }).toDestination();
+           const normalReverb = new Tone.Reverb(0.5).toDestination();
+           normalSynth.connect(normalReverb);
+           const melody = ['C4', 'E4', 'G4', 'E4', 'A3', 'C4', 'E4', 'C4', 'F3', 'A3', 'C4', 'A3', 'G3', 'B3', 'D4', 'B3'];
+           let melodyIndex = 0;
+           normalMusicLoop = new Tone.Loop(time => {
+               normalSynth.triggerAttackRelease(melody[melodyIndex], "8n", time);
+               melodyIndex = (melodyIndex + 1) % melody.length;
+           }, "8n");
+
+
+           // 2. Creepy Music
+           creepySynth = new Tone.AMSynth({
+               harmonicity: 1.5,
+               oscillator: { type: "sine" },
+               envelope: { attack: 0.01, decay: 1, sustain: 0.5, release: 1 },
+               modulation: { type: "square" },
+               modulationEnvelope: { attack: 0.5, decay: 0.2, sustain: 0.8, release: 1 }
+           }).toDestination();
+           const creepyReverb = new Tone.Reverb(2.0).toDestination(); // More reverb
+           creepySynth.connect(creepyReverb);
+           const creepyMelody = ['C2', 'D#2', 'D2', 'F#2'];
+           let creepyIndex = 0;
+           creepyMusicLoop = new Tone.Loop(time => {
+               creepySynth.triggerAttackRelease(creepyMelody[creepyIndex], "1n", time); // Slower notes
+               creepyIndex = (creepyIndex + 1) % creepyMelody.length;
+           }, "1n"); // Play a whole note every whole note
+
+
+           Tone.Transport.bpm.value = 120; // Slower base tempo for creepy
+       }
+
+
+       async function toggleMusic() {
+           await initAudioContext();
+           if (musicPlaying) {
+               // Stop music
+               Tone.Transport.stop();
+               normalMusicLoop.stop();
+               creepyMusicLoop.stop();
+               toggleMusicBtn.textContent = "";
+           } else {
+               // Start music
+               Tone.Transport.start();
+               if (isCorruptMode) {
+                   Tone.Transport.bpm.value = 120;
+                   creepyMusicLoop.start(0);
+               } else {
+                   Tone.Transport.bpm.value = 140;
+                   normalMusicLoop.start(0);
+               }
+               toggleMusicBtn.textContent = "";
+           }
+           musicPlaying = !musicPlaying;
+       }
+
+
+
+
+       // --- Game Logic Functions ---
+
+
+       /**
+        * Shows a toast notification
+        */
+       function showToast() {
+           const toast = document.createElement('div');
+           toast.className = 'toast-notification';
+           toast.textContent = ":)";
+           document.body.appendChild(toast);
+
+
+           // Animate in
+           setTimeout(() => {
+               toast.classList.add('show');
+           }, 100);
+
+
+           // Animate out after 2 seconds
+           setTimeout(() => {
+               toast.classList.remove('show');
+               // Remove from DOM after animation
+               setTimeout(() => {
+                   toast.remove();
+               }, 500);
+           }, 2000);
+       }
+
+
+       /**
+        * Calculates total SPS and SPC from all upgrades
+        */
+       function calculateTotals() {
+           // 1. Calculate Base SPS
+           let baseSPS = 0;
+           baseSPS += gameState.autoClicker.level * gameState.autoClicker.sps;
+           baseSPS += gameState.generator.level * gameState.generator.sps;
+           baseSPS += gameState.bigGenerator.level * gameState.bigGenerator.sps;
+           baseSPS += gameState.megaGenerator.level * gameState.megaGenerator.sps;
+
+
+           // 2. Apply Multipliers (Global Multiplier)
+           calculatedSPS = baseSPS * Math.pow(gameState.multiplier.multiplier, gameState.multiplier.level);
+
+
+           // 3. Calculate Base Clicks
+           let baseSPC = 0;
+           baseSPC += gameState.clicker.level * gameState.clicker.clickBonus;
+           baseSPC += gameState.clickBoost.level * gameState.clickBoost.clickBonus;
+
+
+           // 4. Apply Synergy Clicks (% of SPS)
+           let synergyBonus = calculatedSPS * (gameState.synergy.level * gameState.synergy.percent);
+          
+           // Add code bonus here
+           calculatedSPC = baseSPC + synergyBonus + gameState.codeBonus;
+
+
+           // 5. Apply Glitch Crab Multiplier
+           if (gameState.glitchCrab.level > 0) {
+               const glitchMultiplier = Math.pow(gameState.glitchCrab.multiplier, gameState.glitchCrab.level);
+               calculatedSPS *= glitchMultiplier;
+               calculatedSPC *= glitchMultiplier;
+           }
+
+
+           // 6. Check for Corrupt Mode Override
+           if (isCorruptMode) {
+               calculatedSPC = 0.1;
+               calculatedSPS = 0;
+           }
+       }
+
+
+       // Helper function for large number formatting
+       function formatLargeNumber(num) {
+           if (num < 1e6) return num.toLocaleString();
+           if (num < 1e9) return (num / 1e6).toFixed(2) + " M";
+           if (num < 1e12) return (num / 1e9).toFixed(2) + " B";
+           if (num < 1e15) return (num / 1e12).toFixed(2) + " T";
+           if (num < 1e18) return (num / 1e15).toFixed(2) + " Qa";
+           if (num < 1e21) return (num / 1e18).toFixed(2) + " Qi";
+           return (num / 1e21).toFixed(2) + " Sx";
+       }
+
+
+       /**
+        * Updates the entire UI based on the current gameState
+        */
+       function updateUI() {
+           if (!scoreDisplay) return;
+          
+           calculateTotals();
+
+
+           scoreDisplay.textContent = formatLargeNumber(Math.floor(gameState.points));
+          
+           // Show Corrupt Mode text instead of SPS
+           if (isCorruptMode) {
+               spsDisplay.textContent = "CORRUPT MODE";
+               spsDisplay.classList.add('text-red-500');
+               spsDisplay.classList.remove('text-cyan-300');
+           } else {
+               spsDisplay.textContent = calculatedSPS > 0 ? `${formatLargeNumber(calculatedSPS)} points/sec` : "&nbsp;";
+               spsDisplay.classList.remove('text-red-500');
+               spsDisplay.classList.add('text-cyan-300');
+           }
+
+
+           // Stronger Click
+           clickerLevelSpan.textContent = gameState.clicker.level;
+           clickerCostSpan.textContent = formatLargeNumber(gameState.clicker.cost);
+           upgradeClicker.disabled = gameState.points < gameState.clicker.cost;
+          
+           // Auto Clicker
+           autoClickerLevelSpan.textContent = gameState.autoClicker.level;
+           autoClickerCostSpan.textContent = formatLargeNumber(gameState.autoClicker.cost);
+           upgradeAutoClicker.disabled = gameState.points < gameState.autoClicker.cost;
+
+
+           // Point Generator
+           generatorLevelSpan.textContent = gameState.generator.level;
+           generatorCostSpan.textContent = formatLargeNumber(gameState.generator.cost);
+           upgradeGenerator.disabled = gameState.points < gameState.generator.cost;
+
+
+           // Mini-Game Bonus
+           gameBonusLevelSpan.textContent = gameState.gameBonus.level;
+           gameBonusCostSpan.textContent = formatLargeNumber(gameState.gameBonus.cost);
+           upgradeGameBonus.disabled = gameState.points < gameState.gameBonus.cost;
+
+
+           // Big Generator
+           bigGeneratorLevelSpan.textContent = gameState.bigGenerator.level;
+           bigGeneratorCostSpan.textContent = formatLargeNumber(gameState.bigGenerator.cost);
+           upgradeBigGenerator.disabled = gameState.points < gameState.bigGenerator.cost;
+
+
+           // Synergy Clicks
+           synergyLevelSpan.textContent = gameState.synergy.level;
+           synergyCostSpan.textContent = formatLargeNumber(gameState.synergy.cost);
+           upgradeSynergy.disabled = gameState.points < gameState.synergy.cost;
+          
+           // Mega Generator
+           megaGeneratorLevelSpan.textContent = gameState.megaGenerator.level;
+           megaGeneratorCostSpan.textContent = formatLargeNumber(gameState.megaGenerator.cost);
+           upgradeMegaGenerator.disabled = gameState.points < gameState.megaGenerator.cost;
+
+
+           // Click Boost
+           clickBoostLevelSpan.textContent = gameState.clickBoost.level;
+           clickBoostCostSpan.textContent = formatLargeNumber(gameState.clickBoost.cost);
+           upgradeClickBoost.disabled = gameState.points < gameState.clickBoost.cost;
+
+
+           // Global Multiplier
+           multiplierLevelSpan.textContent = gameState.multiplier.level;
+           multiplierCostSpan.textContent = formatLargeNumber(gameState.multiplier.cost);
+           upgradeMultiplier.disabled = gameState.points < gameState.multiplier.cost;
+
+
+           // Glitch Crab Update
+           if (gameState.gameBeaten) {
+               upgradeGlitchCrab.classList.remove('hidden');
+               glitchCrabLevelSpan.textContent = gameState.glitchCrab.level;
+               glitchCrabCostSpan.textContent = formatLargeNumber(gameState.glitchCrab.cost);
+               upgradeGlitchCrab.disabled = gameState.points < gameState.glitchCrab.cost;
+              
+               // NEW: Show secret code section if not yet applied
+               if (!gameState.secretCodeApplied) {
+                   secretCodeSection.classList.remove('hidden');
+               } else {
+                   secretCodeSection.classList.add('hidden');
+               }
+
+
+           } else {
+               upgradeGlitchCrab.classList.add('hidden');
+               secretCodeSection.classList.add('hidden'); // NEW: Hide if not beaten
+           }
+
+
+           // Apply glitch effect if purchased
+           if (gameState.glitchCrab.level > 0) {
+               crab.classList.add('glitched');
+           } else {
+               crab.classList.remove('glitched');
+           }
+       }
+
+
+       /**
+        * Shows a floating crab animation
+        */
+       function showClickFeedback() {
+           const feedback = document.createElement('div');
+           feedback.className = 'crab-feedback'; // Use new class
+           feedback.textContent = ``; // Use crab emoji
+           feedbackContainer.appendChild(feedback);
+          
+           // Remove after 1.2s (duration of new animation)
+           setTimeout(() => {
+               feedback.remove();
+           }, 1200);
+       }
+
+
+       /**
+        * Handles the crab click event
+        */
+       function clickCrab() {
+           initAudioContext(); // Start audio on first click, don't wait
+          
+           // Use calculated value (which might be 0.1)
+           const clickValue = isCorruptMode ? 0.1 : Math.floor(calculatedSPC);
+           gameState.points += clickValue;
+
+
+           // Only show animation if click value is 1 or more
+           if (clickValue >= 1) {
+               showClickFeedback(); // No longer needs to pass the value
+           }
+           updateUI();
+       }
+
+
+       /**
+        * Handles buying the Stronger Click upgrade
+        */
+       function buyUpgradeClicker() {
+           if (gameState.points >= gameState.clicker.cost) {
+               gameState.points -= gameState.clicker.cost;
+               gameState.clicker.level++;
+               gameState.clicker.cost = Math.ceil(gameState.clicker.cost * 1.3);
+               updateUI();
+               saveGameData();
+               showToast();
+           }
+       }
+
+
+
+
+       /**
+        * Handles buying the Auto Clicker upgrade
+        */
+       function buyUpgradeAutoClicker() {
+           if (gameState.points >= gameState.autoClicker.cost) {
+               gameState.points -= gameState.autoClicker.cost;
+               gameState.autoClicker.level++;
+               gameState.autoClicker.cost = Math.ceil(gameState.autoClicker.cost * 1.4);
+               updateUI();
+               saveGameData();
+               showToast();
+           }
+       }
+
+
+       /**
+        * Handles buying the Point Generator upgrade
+        */
+       function buyUpgradeGenerator() {
+           if (gameState.points >= gameState.generator.cost) {
+               gameState.points -= gameState.generator.cost;
+               gameState.generator.level++;
+               gameState.generator.cost = Math.ceil(gameState.generator.cost * 1.5);
+               updateUI();
+               saveGameData();
+               showToast();
+           }
+       }
+
+
+       /**
+        * Handles buying the Mini-Game Bonus upgrade
+        */
+       function buyUpgradeGameBonus() {
+           if (gameState.points >= gameState.gameBonus.cost) {
+               gameState.points -= gameState.gameBonus.cost;
+               gameState.gameBonus.level++;
+               gameState.gameBonus.bonus += 0.25;
+               gameState.gameBonus.cost = Math.ceil(gameState.gameBonus.cost * 2);
+               updateUI();
+               saveGameData();
+               showToast();
+           }
+       }
+
+
+       /**
+        * Handles buying the Big Generator upgrade
+        */
+       function buyUpgradeBigGenerator() {
+           if (gameState.points >= gameState.bigGenerator.cost) {
+               gameState.points -= gameState.bigGenerator.cost;
+               gameState.bigGenerator.level++;
+               gameState.bigGenerator.cost = Math.ceil(gameState.bigGenerator.cost * 1.6);
+               updateUI();
+               saveGameData();
+               showToast();
+           }
+       }
+
+
+       /**
+        * Handles buying the Synergy Clicks upgrade
+        */
+       function buyUpgradeSynergy() {
+           if (gameState.points >= gameState.synergy.cost) {
+               gameState.points -= gameState.synergy.cost;
+               gameState.synergy.level++;
+               gameState.synergy.cost = Math.ceil(gameState.synergy.cost * 1.8);
+               updateUI();
+               saveGameData();
+               showToast();
+           }
+       }
+
+
+       /**
+        * Handles buying the Mega Generator upgrade
+        */
+       function buyUpgradeMegaGenerator() {
+           if (gameState.points >= gameState.megaGenerator.cost) {
+               gameState.points -= gameState.megaGenerator.cost;
+               gameState.megaGenerator.level++;
+               gameState.megaGenerator.cost = Math.ceil(gameState.megaGenerator.cost * 1.7);
+               updateUI();
+               saveGameData();
+               showToast();
+           }
+       }
+
+
+       /**
+        * Handles buying the Click Boost upgrade
+        */
+       function buyUpgradeClickBoost() {
+           if (gameState.points >= gameState.clickBoost.cost) {
+               gameState.points -= gameState.clickBoost.cost;
+               gameState.clickBoost.level++;
+               gameState.clickBoost.cost = Math.ceil(gameState.clickBoost.cost * 2.0);
+               updateUI();
+               saveGameData();
+               showToast();
+           }
+       }
+
+
+       /**
+        * Handles buying the Global Multiplier upgrade
+        */
+       function buyUpgradeMultiplier() {
+           if (gameState.points >= gameState.multiplier.cost) {
+               gameState.points -= gameState.multiplier.cost;
+               gameState.multiplier.level++;
+               gameState.multiplier.cost = Math.ceil(gameState.multiplier.cost * 3.0);
+               updateUI();
+               saveGameData();
+               showToast();
+           }
+       }
+
+
+       /**
+        * Handles buying the Glitch Crab upgrade
+        */
+       function buyUpgradeGlitchCrab() {
+           if (gameState.points >= gameState.glitchCrab.cost) {
+               gameState.points -= gameState.glitchCrab.cost;
+               gameState.glitchCrab.level++;
+               gameState.glitchCrab.cost = Math.ceil(gameState.glitchCrab.cost * 10); // Becomes very expensive
+               updateUI();
+               saveGameData();
+               showToast();
+           }
+       }
+
+
+       /**
+        * Handles submitting a cheat code
+        */
+       function submitCode() {
+           const code = codeInput.value.toLowerCase().trim();
+           let message = "Invalid code.";
+           let messagePersists = false;
+          
+           if (code === 'milk carton') {
+               if (gameState.codeApplied) {
+                   message = "Code already applied!";
+                   messagePersists = true;
+               } else {
+                   gameState.codeApplied = true;
+                   gameState.codeBonus = 999000000000;
+                   message = "Code applied! +999 Billion per click!";
+                   codeInput.value = ""; // Clear input
+                   codeInput.disabled = true;
+                   submitCodeBtn.disabled = true;
+                   messagePersists = true;
+                   updateUI();
+                   saveGameData();
+               }
+           }
+
+
+           codeMessage.textContent = message;
+          
+           // Clear message after 3 seconds, unless it's a permanent message
+           setTimeout(() => {
+               if (!messagePersists && codeMessage.textContent === message) {
+                    codeMessage.innerHTML = "&nbsp;";
+               }
+           }, 3000);
+       }
+      
+       /**
+        * NEW: Handles submitting the secret "post-game" code
+        */
+       function submitSecretCode() {
+           const code = secretCodeInput.value.toLowerCase().trim();
+           let message = "Invalid code.";
+
+
+           if (code === 'qwertyuiopasdfghjklzxcvbnm') {
+               if (gameState.secretCodeApplied) {
+                   message = "Code already applied.";
+               } else if (gameState.gameBeaten) { // Check again just in case
+                   gameState.points = 999999999999999; // 1 point shy of 1 Qa
+                   gameState.secretCodeApplied = true;
+                   message = "???"; // Success!
+                  
+                   // Hide the section permanently
+                   secretCodeSection.classList.add('hidden');
+                   updateUI();
+                   saveGameData();
+               } else {
+                   message = "You are not ready.";
+               }
+           }
+
+
+           secretCodeMessage.textContent = message;
+
+
+           setTimeout(() => {
+               if (secretCodeMessage.textContent === message) {
+                    secretCodeMessage.innerHTML = "&nbsp;";
+               }
+           }, 3000);
+       }
+
+
+       /**
+        * Resets the game state to default
+        */
+       function handleGameReset() {
+           console.log("Resetting game...");
+           // Deep copy the default state into the active state
+           gameState = JSON.parse(JSON.stringify(defaultGameState));
+          
+           // Reset code input field
+           codeInput.disabled = false;
+           submitCodeBtn.disabled = false;
+           codeMessage.innerHTML = "&nbsp;";
+
+
+           // Reset secret code section (it will be hidden by updateUI)
+           secretCodeInput.value = "";
+           secretCodeMessage.innerHTML = "&nbsp;";
+
+
+           // Reset corrupt mode if active
+           if (isCorruptMode) {
+               toggleCorruptMode();
+           }
+
+
+           updateUI();
+           saveGameData(true); // Force-save the new, reset state
+           resetModal.classList.add('hidden'); // Hide the modal
+       }
+
+
+       /**
+        * Toggles Corrupt Mode
+        */
+       function toggleCorruptMode() {
+           isCorruptMode = !isCorruptMode;
+           gameContainer.classList.toggle('corrupt-mode');
+
+
+           if (isCorruptMode) {
+               corruptModeBtn.textContent = "Return to Normal";
+           } else {
+               corruptModeBtn.textContent = "Play in Corrupt Mode";
+           }
+
+
+           // If music is playing, swap tracks
+           if (musicPlaying) {
+               normalMusicLoop.stop();
+               creepyMusicLoop.stop();
+               if (isCorruptMode) {
+                   Tone.Transport.bpm.value = 120;
+                   creepyMusicLoop.start(0);
+               } else {
+                   Tone.Transport.bpm.value = 140;
+                   normalMusicLoop.start(0);
+               }
+           }
+
+
+           // Recalculate and update UI
+           updateUI();
+       }
+
+
+
+
+       // --- Game Loops ---
+
+
+       function gameLoop() {
+           const pointsEarned = calculatedSPS / 10;
+           if (pointsEarned > 0) {
+               gameState.points += pointsEarned;
+           }
+
+
+           // Check for game beat condition
+           // 1 Trillion = 1_000_000_000_000
+           if (!gameState.gameBeaten && gameState.points >= 1000000000000) {
+               gameState.gameBeaten = true;
+               gameBeatModal.classList.remove('hidden');
+               saveGameData(); // Save that they've beaten the game
+           }
+          
+           // We call updateUI here to check points and enable/disable buttons
+           updateUI();
+       }
+      
+        function autoSaveLoop() {
+           saveGameData();
+        }
+
+
+       // --- Firebase Functions ---
+
+
+       function loadGameData() {
+           if (!dbRef) return;
+           loadingState.textContent = "Finding your save file...";
+          
+           if (unsubscribe) unsubscribe();
+
+
+           unsubscribe = onSnapshot(dbRef, (docSnap) => {
+               if (docSnap.exists()) {
+                   let data = docSnap.data();
+
+
+                   // --- MIGRATION LOGIC ---
+                   let needsSave = false;
+                   if (data.shells !== undefined) {
+                       data.points = data.shells;
+                       delete data.shells;
+                       needsSave = true;
+                   }
+                   if (data.pincer) { data.clicker = data.pincer; delete data.pincer; needsSave = true; }
+                   if (data.shrimp) { data.autoClicker = data.shrimp; delete data.shrimp; needsSave = true; }
+                   if (data.clam) { data.generator = data.clam; delete data.clam; needsSave = true; }
+                   if (data.goldenCrab) { data.gameBonus = data.goldenCrab; delete data.goldenCrab; needsSave = true; }
+                   if (data.kraken) { data.bigGenerator = data.kraken; delete data.kraken; needsSave = true; }
+                   if (data.tidal) { data.synergy = data.tidal; delete data.tidal; needsSave = true; }
+                   if (data.coral) { data.megaGenerator = data.coral; delete data.coral; needsSave = true; }
+                   if (data.treasure) { data.clickBoost = data.treasure; delete data.treasure; needsSave = true; }
+                   if (data.leviathan) { data.multiplier = data.leviathan; delete data.leviathan; needsSave = true; }
+                   // --- END MIGRATION ---
+
+
+                   // Merge migrated data with default state
+                   gameState = { ...defaultGameState, ...data }; // Use default as base
+
+
+                   if (needsSave) {
+                       console.log("Migrating save file to new format...");
+                       saveGameData(true); // Force a save to clean up the DB entry
+                   }
+
+
+               } else {
+                   console.log("No save file found, creating a new one.");
+                   // Ensure we start with the default state if no save exists
+                   gameState = JSON.parse(JSON.stringify(defaultGameState));
+                   saveGameData();
+               }
+               updateUI();
+               loadingState.style.display = 'none';
+
+
+               // Check if code was already applied on load
+               if (gameState.codeApplied) {
+                   codeInput.disabled = true;
+                   submitCodeBtn.disabled = true;
+                   codeMessage.textContent = "Code has been applied.";
+               }
+
+
+           }, (error) => {
+               console.error("Error loading game data: ", error);
+               loadingState.textContent = "Error loading data.";
+           });
+       }
+
+
+       async function saveGameData(force = false) {
+           // Allow force save even if isSaving is true (for migration)
+           if (!dbRef || (isSaving && !force)) return;
+          
+           isSaving = true;
+           try {
+               // Only save the gameState object
+               await setDoc(dbRef, gameState);
+           } catch (error) {
+               console.error("Error saving game data: ", error);
+           } finally {
+               isSaving = false;
+           }
+       }
+
+
+       function initializeGame() {
+           try {
+               app = initializeApp(firebaseConfig);
+               auth = getAuth(app);
+               db = getFirestore(app);
+               setLogLevel('debug');
+              
+               onAuthStateChanged(auth, async (user) => {
+                   if (user) {
+                       userId = user.uid;
+                       userIdDisplay.textContent = `User ID: ${userId}`;
+                       // This path stays the same to find the old save file for migration
+                       dbRef = doc(db, `artifacts/${appId}/users/${userId}/crabathonState/gameState`);
+                       loadGameData();
+                   } else {
+                       userId = null;
+                       userIdDisplay.textContent = "Signing in...";
+                       try {
+                           if (initialAuthToken) {
+                               await signInWithCustomToken(auth, initialAuthToken);
+                           } else {
+                               await signInAnonymously(auth);
+                           }
+                       } catch (error) {
+                           console.error("Error signing in: ", error);
+                           loadingState.textContent = "Error connecting.";
+                       }
+                   }
+               });
+           } catch (error)
+           {
+               console.error("Error initializing Firebase: ", error);
+               loadingState.textContent = "Could not initialize game.";
+           }
+       }
+
+
+       // --- Mini-Game Logic ---
+       // (This section is unchanged, but "shells" is now "points")
+
+
+       const ctx = miniGameCanvas.getContext('2d');
+       const CANVAS_WIDTH = miniGameCanvas.width;
+       const CANVAS_HEIGHT = miniGameCanvas.height;
+
+
+       let crabathonPlayer = {
+           x: 50, y: CANVAS_HEIGHT - 30, width: 20, height: 20,
+           dy: 0, gravity: 0.5, jumpStrength: -8, isJumping: false,
+           draw() {
+               ctx.font = '24px serif';
+               ctx.fillText('', this.x, this.y + this.height - 4);
+           }
+       };
+
+
+       let spikes = [];
+       let miniGameScore = 0;
+       let miniGameRunning = false;
+       let miniGameFrameId, spikeInterval, scoreInterval;
+
+
+       function showMiniGameOverModal(score, bonus, earned) {
+           minigameOverMessage.textContent = `You earned ${earned.toLocaleString()} points! (Score: ${score} x${bonus.toFixed(2)} bonus)`;
+           minigameOverModal.classList.remove('hidden');
+       }
+
+
+       function startGame() {
+           miniGameOverlay.classList.remove('hidden');
+           crabathonPlayer.y = CANVAS_HEIGHT - 30;
+           crabathonPlayer.dy = 0;
+           crabathonPlayer.isJumping = false;
+           spikes = [];
+           miniGameScore = 0;
+           miniGameScoreDisplay.textContent = miniGameScore;
+           miniGameRunning = true;
+
+
+           document.addEventListener('keydown', handleJump);
+           miniGameCanvas.addEventListener('click', handleJump);
+
+
+           if (spikeInterval) clearInterval(spikeInterval);
+           if (scoreInterval) clearInterval(scoreInterval);
+
+
+           spikeInterval = setInterval(createSpike, 2000);
+           scoreInterval = setInterval(() => {
+               if (miniGameRunning) {
+                   miniGameScore += 1;
+                   miniGameScoreDisplay.textContent = miniGameScore;
+               }
+           }, 100);
+
+
+           gameLoopMiniGame();
+       }
+
+
+       function endGame() {
+           if (!miniGameRunning) return;
+           miniGameRunning = false;
+           cancelAnimationFrame(miniGameFrameId);
+           clearInterval(spikeInterval);
+           clearInterval(scoreInterval);
+
+
+           document.removeEventListener('keydown', handleJump);
+           miniGameCanvas.removeEventListener('click', handleJump);
+          
+           const pointsEarned = Math.floor(miniGameScore * gameState.gameBonus.bonus);
+           // Corrupt mode doesn't affect mini-game score
+           gameState.points += pointsEarned;
+           // Use the mini-crab feedback for mini-game points
+           if (pointsEarned > 0) {
+               showClickFeedback();
+           }
+           updateUI();
+           saveGameData();
+
+
+           miniGameOverlay.classList.add('hidden');
+           showMiniGameOverModal(miniGameScore, gameState.gameBonus.bonus, pointsEarned);
+       }
+
+
+       function handleJump(event) {
+           if (!miniGameRunning) return;
+           if (event.code === 'Space' || event.type === 'click') {
+               if (!crabathonPlayer.isJumping) {
+                   crabathonPlayer.dy = crabathonPlayer.jumpStrength;
+                   crabathonPlayer.isJumping = true;
+               }
+           }
+       }
+
+
+       function createSpike() {
+           if (!miniGameRunning) return;
+           const spikeHeight = 15 + Math.random() * 20;
+           spikes.push({
+               x: CANVAS_WIDTH, y: CANVAS_HEIGHT - spikeHeight,
+               width: 10, height: spikeHeight,
+               speed: 3 + Math.random() * 2
+           });
+       }
+
+
+       function updateMiniGame() {
+           crabathonPlayer.dy += crabathonPlayer.gravity;
+           crabathonPlayer.y += crabathonPlayer.dy;
+
+
+           if (crabathonPlayer.y + crabathonPlayer.height > CANVAS_HEIGHT) {
+               crabathonPlayer.y = CANVAS_HEIGHT - crabathonPlayer.height;
+               crabathonPlayer.dy = 0;
+               crabathonPlayer.isJumping = false;
+           }
+
+
+           for (let i = spikes.length - 1; i >= 0; i--) {
+               const spike = spikes[i];
+               spike.x -= spike.speed;
+
+
+               if (
+                   crabathonPlayer.x < spike.x + spike.width &&
+                   crabathonPlayer.x + crabathonPlayer.width > spike.x &&
+                   crabathonPlayer.y < spike.y + spike.height &&
+                   crabathonPlayer.y + crabathonPlayer.height > spike.y
+               ) {
+                   endGame();
+                   return;
+               }
+               if (spike.x + spike.width < 0) spikes.splice(i, 1);
+           }
+       }
+
+
+       function drawMiniGame() {
+           ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+           ctx.fillStyle = '#65a30d';
+           ctx.fillRect(0, CANVAS_HEIGHT - 10, CANVAS_WIDTH, 10);
+           crabathonPlayer.draw();
+           ctx.fillStyle = '#ef4444';
+           spikes.forEach(spike => {
+               ctx.beginPath();
+               ctx.moveTo(spike.x, spike.y + spike.height);
+               ctx.lineTo(spike.x + spike.width / 2, spike.y);
+               ctx.lineTo(spike.x + spike.width, spike.y + spike.height);
+               ctx.closePath();
+               ctx.fill();
+           });
+       }
+
+
+       function gameLoopMiniGame() {
+           if (!miniGameRunning) return;
+           updateMiniGame();
+           drawMiniGame();
+           miniGameFrameId = requestAnimationFrame(gameLoopMiniGame);
+       }
+
+
+
+
+       // --- Start the Game ---
+
+
+       document.addEventListener('DOMContentLoaded', () => {
+           initializeGame();
+           setupMusic(); // Set up the synth and loop
+
+
+           // Attach main game event listeners
+           crab.addEventListener('click', clickCrab);
+           toggleMusicBtn.addEventListener('click', toggleMusic);
+
+
+           // Attach listeners for new upgrades
+           upgradeClicker.addEventListener('click', buyUpgradeClicker);
+           upgradeAutoClicker.addEventListener('click', buyUpgradeAutoClicker);
+           upgradeGenerator.addEventListener('click', buyUpgradeGenerator);
+           upgradeGameBonus.addEventListener('click', buyUpgradeGameBonus);
+           upgradeBigGenerator.addEventListener('click', buyUpgradeBigGenerator);
+           upgradeSynergy.addEventListener('click', buyUpgradeSynergy);
+           upgradeMegaGenerator.addEventListener('click', buyUpgradeMegaGenerator);
+           upgradeClickBoost.addEventListener('click', buyUpgradeClickBoost);
+           upgradeMultiplier.addEventListener('click', buyUpgradeMultiplier);
+           upgradeGlitchCrab.addEventListener('click', buyUpgradeGlitchCrab);
+
+
+           // Attach code submit listener
+           submitCodeBtn.addEventListener('click', submitCode);
+
+
+           // NEW: Attach secret code listener
+           submitSecretCodeBtn.addEventListener('click', submitSecretCode);
+
+
+           // Attach corrupt mode listener
+           corruptModeBtn.addEventListener('click', toggleCorruptMode);
+
+
+           // Attach reset modal listeners
+           resetGameBtn.addEventListener('click', () => {
+               resetModal.classList.remove('hidden');
+           });
+           resetCancelBtn.addEventListener('click', () => {
+               resetModal.classList.add('hidden');
+           });
+           resetConfirmBtn.addEventListener('click', handleGameReset);
+
+
+           // Attach mini-game event listeners
+           playMinigameBtn.addEventListener('click', startGame);
+           quitMinigameBtn.addEventListener('click', endGame);
+           minigameOverOk.addEventListener('click', () => {
+               minigameOverModal.classList.add('hidden');
+           });
+
+
+           // Attach game beat modal listener
+           gameBeatOk.addEventListener('click', () => {
+               gameBeatModal.classList.add('hidden');
+           });
+
+
+           // Start main game loops
+           setInterval(gameLoop, 100);
+           setInterval(autoSaveLoop, 10000);
+       });
+
+
+   </script>
+</body>
+</html>
+
+

@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frog Farmer - Clean UI Update</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+        @keyframes wiggle {
+            0%, 100% { transform: rotate(-10deg); }
+            50% { transform: rotate(10deg); }
+        }
+        .ready-crop { animation: bounce 1s infinite; cursor: pointer; }
+        .bug-crop { animation: wiggle 0.5s infinite; cursor: pointer; }
+        .plot { transition: all 0.3s; }
+        .plot:hover { filter: brightness(1.1); }
+        .selected-tool { border-color: #fbbf24 !important; box-shadow: 0 0 15px #fcd34d; }
+    </style>
+</head>
+<body class="bg-green-100 font-sans p-4 select-none relative min-h-screen pb-20">
+
+    <!-- GAME HEADER -->
+    <div class="max-w-6xl mx-auto bg-green-600 rounded-2xl p-4 text-white flex flex-wrap justify-between items-center shadow-lg border-4 border-green-800 gap-4">
+        <div class="text-3xl font-bold flex items-center gap-2">
+            🐸 <span id="playerName">Frog Farmer</span>
+            <span id="dayDisplay" class="text-xl ml-4 bg-green-700 px-3 py-1 rounded-lg">Day 1</span>
+        </div>
+        <div class="text-2xl font-bold bg-green-800 px-4 py-2 rounded-xl flex items-center gap-2">
+            🪙 <span id="coinDisplay">1000</span>
+        </div>
+        <div class="text-2xl font-bold bg-blue-500 px-4 py-2 rounded-xl flex items-center gap-2 transition-colors duration-500" id="timeBox">
+            ⏰ <span id="timeDisplay">6:00 AM</span>
+        </div>
+    </div>
+
+    <!-- MAIN GAME AREA -->
+    <div class="max-w-6xl mx-auto mt-6 flex flex-col lg:flex-row gap-6">
+        
+        <!-- LEFT SIDE: The Farm Grid & Customers -->
+        <div class="flex-1 flex flex-col gap-6">
+            
+            <!-- The Store Counter -->
+            <div class="bg-pink-100 p-4 rounded-2xl shadow-lg border-4 border-pink-300 flex flex-col">
+                <div class="flex justify-between items-center mb-4 border-b-2 border-pink-200 pb-2">
+                    <h2 class="text-xl font-bold text-pink-900">Store Counter 🛎️</h2>
+                    <button onclick="toggleStore()" id="storeToggleBtn" class="bg-red-500 hover:bg-red-400 text-white font-bold py-1 px-4 rounded-lg shadow border-b-4 border-red-700 active:border-b-0 active:mt-1 transition-all">
+                        Close Store 🛑
+                    </button>
+                </div>
+
+                <div id="customerInfo" class="flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <div>
+                        <p id="customerText" class="text-pink-800 font-bold text-xl">🐷 Penny Pig wants 1 🧅 Turnip!</p>
+                        <p id="customerReward" class="text-green-700 font-bold text-lg bg-white px-2 py-1 rounded inline-block mt-1 border-2 border-green-200">Reward: 30 🪙</p>
+                    </div>
+                    <div class="flex gap-2 w-full sm:w-auto">
+                        <button onclick="passCustomer()" class="flex-1 sm:flex-none bg-gray-400 hover:bg-gray-300 text-white font-bold py-3 px-4 rounded-xl shadow border-b-4 border-gray-600 active:border-b-0 active:translate-y-1 transition-all">
+                            Pass 👎
+                        </button>
+                        <button onclick="sellToCustomer()" class="flex-1 sm:flex-none bg-pink-500 hover:bg-pink-400 text-white font-bold py-3 px-6 rounded-xl shadow border-b-4 border-pink-700 active:border-b-0 active:translate-y-1 transition-all">
+                            Sell! 👍
+                        </button>
+                    </div>
+                </div>
+
+                <div id="waitingMessage" class="hidden text-center text-pink-700 font-bold text-lg py-4">
+                    Waiting for the next customer... ⏳
+                </div>
+            </div>
+
+            <!-- The Farm -->
+            <div class="bg-amber-700 p-6 rounded-2xl shadow-lg border-4 border-amber-900 relative">
+                <h2 class="text-2xl font-bold text-white mb-4 text-center">Your Farm 🌾</h2>
+                <div id="farmGrid" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
+                    <!-- Dirt plots go here -->
+                </div>
+                
+                <div class="mt-6 flex justify-center">
+                    <button id="expandBtn" onclick="expandFarm()" class="bg-amber-500 hover:bg-amber-400 text-amber-900 font-bold py-3 px-6 rounded-xl shadow-lg border-b-4 border-amber-800 active:border-b-0 active:translate-y-1 transition-all flex items-center gap-2">
+                        🚜 Buy More Land (500 🪙)
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT SIDE: Shop and COMBINED Backpack! -->
+        <div class="w-full lg:w-80 flex flex-col gap-4">
+            
+            <!-- The Shop -->
+            <div class="bg-blue-100 p-4 rounded-2xl shadow-lg border-4 border-blue-300">
+                <h2 class="text-xl font-bold text-blue-900 mb-3 text-center">The Shop 🏪</h2>
+                <div class="flex flex-col gap-2" id="shopItems">
+                    <button onclick="buyItem('turnip')" class="bg-white p-2 rounded-xl shadow hover:bg-gray-50 flex justify-between items-center border-2 border-transparent">
+                        <span class="text-base font-bold text-gray-700">🧅 Turnip Seed</span>
+                        <span class="font-bold text-green-600">10 🪙</span>
+                    </button>
+                    <button onclick="buyItem('watermelon')" class="bg-white p-2 rounded-xl shadow hover:bg-gray-50 flex justify-between items-center border-2 border-transparent">
+                        <span class="text-base font-bold text-gray-700">🍉 Melon Seed</span>
+                        <span class="font-bold text-green-600">50 🪙</span>
+                    </button>
+                    <button onclick="buyItem('golden')" class="bg-yellow-100 p-2 rounded-xl shadow hover:bg-yellow-50 flex justify-between items-center border-2 border-yellow-400">
+                        <span class="text-base font-bold text-yellow-800">🎃 Golden Seed</span>
+                        <span class="font-bold text-green-600">300 🪙</span>
+                    </button>
+                    <button onclick="buyItem('fertilizer')" class="bg-purple-100 p-2 rounded-xl shadow hover:bg-purple-50 flex justify-between items-center border-2 border-purple-400">
+                        <span class="text-base font-bold text-purple-800">✨ Magic Boost</span>
+                        <span class="font-bold text-green-600">40 🪙</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- THE NEW COMBINED BACKPACK! 🎒 -->
+            <div class="bg-purple-100 p-4 rounded-2xl shadow-lg border-4 border-purple-300">
+                <h2 class="text-xl font-bold text-purple-900 mb-2 text-center">My Backpack 🎒</h2>
+                
+                <!-- Section 1: Tools (Clickable) -->
+                <p class="text-xs font-bold text-purple-700 mb-1">Tools to Use (Click to hold):</p>
+                <div class="grid grid-cols-4 gap-2 mb-4">
+                    <button onclick="selectTool('turnip')" id="tool-turnip" class="bg-white p-2 rounded-xl shadow text-center border-4 border-transparent transition-all relative group">
+                        <div class="text-2xl">🌱</div>
+                        <div class="absolute -top-2 -right-2 bg-blue-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full" id="inv-turnip">0</div>
+                    </button>
+                    <button onclick="selectTool('watermelon')" id="tool-watermelon" class="bg-white p-2 rounded-xl shadow text-center border-4 border-transparent transition-all relative">
+                        <div class="text-2xl">🌿</div>
+                        <div class="absolute -top-2 -right-2 bg-blue-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full" id="inv-watermelon">0</div>
+                    </button>
+                    <button onclick="selectTool('golden')" id="tool-golden" class="bg-yellow-50 p-2 rounded-xl shadow text-center border-4 border-transparent transition-all relative">
+                        <div class="text-2xl">🌟</div>
+                        <div class="absolute -top-2 -right-2 bg-blue-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full" id="inv-golden">0</div>
+                    </button>
+                    <button onclick="selectTool('fertilizer')" id="tool-fertilizer" class="bg-purple-50 p-2 rounded-xl shadow text-center border-4 border-transparent transition-all relative">
+                        <div class="text-2xl">✨</div>
+                        <div class="absolute -top-2 -right-2 bg-blue-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full" id="inv-fertilizer">0</div>
+                    </button>
+                </div>
+
+                <!-- Section 2: Harvested Crops (Ready to Sell) -->
+                <p class="text-xs font-bold text-purple-700 mb-1 border-t-2 border-purple-200 pt-2">Veggies to Sell:</p>
+                <div class="flex justify-between items-center bg-white p-2 rounded-xl shadow">
+                    <div class="flex items-center gap-1">🧅 <span id="pantry-turnip" class="font-bold text-gray-700">0</span></div>
+                    <div class="flex items-center gap-1">🍉 <span id="pantry-watermelon" class="font-bold text-gray-700">0</span></div>
+                    <div class="flex items-center gap-1">🎃 <span id="pantry-golden" class="font-bold text-yellow-600">0</span></div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- THE SLEEP SCREEN -->
+    <div id="sleepScreen" class="hidden fixed inset-0 bg-indigo-950/95 z-50 flex flex-col items-center justify-center backdrop-blur-sm">
+        <h1 class="text-6xl text-white font-bold mb-4">🌙 Night Time!</h1>
+        <p class="text-2xl text-indigo-200 mb-8 font-semibold">The frogs are resting... but your plants keep growing!</p>
+        
+        <button onclick="goToSleep()" class="bg-yellow-400 hover:bg-yellow-300 text-yellow-900 text-3xl font-bold py-6 px-12 rounded-full shadow-2xl border-b-8 border-yellow-600 active:border-b-0 active:mt-2 transition-all">
+            Wake Up (Next Day) ☀️
+        </button>
+    </div>
+
+    <!-- Message Box -->
+    <div id="messageBox" class="fixed bottom-10 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-8 py-4 rounded-full text-xl font-bold opacity-0 transition-opacity duration-300 pointer-events-none z-50 shadow-2xl border-2 border-gray-600">
+        Message goes here!
+    </div>
+
+    <script>
+        // ==========================================
+        // 🧠 GAME VARIABLES 
+        // ==========================================
+        let coins = 1000; 
+        let currentDay = 1; 
+        
+        let inventory = { turnip: 0, watermelon: 0, golden: 0, fertilizer: 0 };
+        let pantry = { turnip: 0, watermelon: 0, golden: 0 };
+        let selectedTool = null;
+
+        let isStoreOpen = true; 
+        let customerTimer; 
+        let currentCustomer = { wants: 'turnip', reward: 30 };
+
+        let plots = [
+            { id: 0, crop: null, growth: 0, isReady: false, hasBug: false },
+            { id: 1, crop: null, growth: 0, isReady: false, hasBug: false },
+            { id: 2, crop: null, growth: 0, isReady: false, hasBug: false },
+            { id: 3, crop: null, growth: 0, isReady: false, hasBug: false },
+            { id: 4, crop: null, growth: 0, isReady: false, hasBug: false },
+            { id: 5, crop: null, growth: 0, isReady: false, hasBug: false },
+            { id: 6, crop: null, growth: 0, isReady: false, hasBug: false },
+            { id: 7, crop: null, growth: 0, isReady: false, hasBug: false },
+            { id: 8, crop: null, growth: 0, isReady: false, hasBug: false },
+        ];
+
+        const cropInfo = {
+            turnip: { emoji: '🧅', growTime: 10 },
+            watermelon: { emoji: '🍉', growTime: 25 },
+            golden: { emoji: '🎃', growTime: 250 } 
+        };
+
+        // ==========================================
+        // ⏰ THE CLOCK SYSTEM 
+        // ==========================================
+        let realSecondsPassed = 0;
+        const totalRealSeconds = 180; 
+        let isDayOver = false;
+
+        function updateClock() {
+            if (isDayOver) return;
+            
+            realSecondsPassed++;
+            
+            let totalGameMinutes = 360 + (realSecondsPassed * 2); 
+            let hours = Math.floor(totalGameMinutes / 60);
+            let minutes = totalGameMinutes % 60;
+            let ampm = hours >= 12 ? 'PM' : 'AM';
+            let displayHours = hours > 12 ? hours - 12 : hours;
+            let displayMinutes = minutes < 10 ? '0' + minutes : minutes;
+
+            document.getElementById('timeDisplay').innerText = `${displayHours}:${displayMinutes} ${ampm}`;
+
+            if (realSecondsPassed >= totalRealSeconds) {
+                isDayOver = true;
+                document.getElementById('timeDisplay').innerText = "12:00 PM (NIGHT)";
+                document.getElementById('timeBox').classList.replace('bg-blue-500', 'bg-indigo-900');
+                document.getElementById('sleepScreen').classList.remove('hidden');
+            }
+        }
+        setInterval(updateClock, 1000);
+
+        function goToSleep() {
+            realSecondsPassed = 0;
+            isDayOver = false;
+            currentDay++;
+            document.getElementById('dayDisplay').innerText = `Day ${currentDay}`;
+            document.getElementById('timeBox').classList.replace('bg-indigo-900', 'bg-blue-500');
+            document.getElementById('timeDisplay').innerText = "6:00 AM";
+            document.getElementById('sleepScreen').classList.add('hidden');
+            showMessage(`☀️ Welcome to Day ${currentDay}! Keep farming!`);
+        }
+
+        // ==========================================
+        // 🛍️ SHOP & TOOLS
+        // ==========================================
+        function showMessage(text) {
+            const msgBox = document.getElementById('messageBox');
+            msgBox.innerText = text;
+            msgBox.style.opacity = '1';
+            setTimeout(() => { msgBox.style.opacity = '0'; }, 3000);
+        }
+
+        function buyItem(item) {
+            let cost = 0;
+            if (item === 'turnip') cost = 10;
+            if (item === 'watermelon') cost = 50;
+            if (item === 'golden') cost = 300;
+            if (item === 'fertilizer') cost = 40;
+
+            if (coins >= cost) {
+                coins -= cost;
+                document.getElementById('coinDisplay').innerText = coins;
+                inventory[item]++;
+                document.getElementById(`inv-${item}`).innerText = inventory[item];
+                showMessage(`Bought 1 ${item}! 🛍️`);
+            } else {
+                showMessage("Not enough coins! 😢");
+            }
+        }
+
+        function selectTool(toolType) {
+            if (inventory[toolType] > 0) {
+                selectedTool = toolType;
+                document.getElementById('tool-turnip').classList.remove('selected-tool');
+                document.getElementById('tool-watermelon').classList.remove('selected-tool');
+                document.getElementById('tool-golden').classList.remove('selected-tool');
+                document.getElementById('tool-fertilizer').classList.remove('selected-tool');
+                
+                document.getElementById(`tool-${toolType}`).classList.add('selected-tool');
+                
+                if(toolType === 'fertilizer') showMessage(`Selected Magic Boost! ✨`);
+                else showMessage(`Selected ${toolType} seeds! 🌱`);
+            } else {
+                showMessage(`You don't have any! Buy some in the shop.`);
+            }
+        }
+
+        function expandFarm() {
+            if (coins >= 500) {
+                if (plots.length >= 20) {
+                    showMessage("Your farm is already at maximum size! 🚜");
+                    document.getElementById('expandBtn').style.display = 'none';
+                    return;
+                }
+                
+                coins -= 500;
+                document.getElementById('coinDisplay').innerText = coins;
+                
+                let nextId = plots.length;
+                for(let i = 0; i < 5; i++) {
+                    plots.push({ id: nextId + i, crop: null, growth: 0, isReady: false, hasBug: false });
+                }
+                
+                showMessage("FARM EXPANDED! +5 Plots! 🚜🎉");
+                renderFarm();
+
+                if (plots.length >= 20) {
+                    document.getElementById('expandBtn').style.display = 'none';
+                }
+            } else {
+                showMessage("You need 500 coins to buy more land! 😢");
+            }
+        }
+
+        // ==========================================
+        // 🧑‍🌾 FARMING & BUGS
+        // ==========================================
+        function clickPlot(plotId) {
+            if (isDayOver) {
+                showMessage("It's too dark to farm! Go to sleep. 🌙");
+                return;
+            }
+            let plot = plots[plotId];
+
+            if (plot.hasBug) {
+                plot.hasBug = false;
+                showMessage("Shoo bug! Get out of here! 🐛💨");
+                renderFarm();
+                return; 
+            }
+
+            if (plot.isReady) {
+                pantry[plot.crop]++;
+                document.getElementById(`pantry-${plot.crop}`).innerText = pantry[plot.crop];
+                showMessage(`Harvested 1 ${cropInfo[plot.crop].emoji}! 🧺`);
+                plot.crop = null;
+                plot.growth = 0;
+                plot.isReady = false;
+                renderFarm();
+                return;
+            }
+
+            if (plot.crop !== null && !plot.isReady && selectedTool === 'fertilizer') {
+                inventory.fertilizer--;
+                document.getElementById('inv-fertilizer').innerText = inventory.fertilizer;
+                plot.growth = cropInfo[plot.crop].growTime; 
+                plot.isReady = true;
+                showMessage("WHOOSH! Instant growth! ✨");
+                if (inventory.fertilizer === 0) {
+                    document.getElementById('tool-fertilizer').classList.remove('selected-tool');
+                    selectedTool = null;
+                }
+                renderFarm();
+                return;
+            }
+
+            if (plot.crop === null && (selectedTool === 'turnip' || selectedTool === 'watermelon' || selectedTool === 'golden')) {
+                inventory[selectedTool]--;
+                document.getElementById(`inv-${selectedTool}`).innerText = inventory[selectedTool];
+                plot.crop = selectedTool;
+                plot.growth = 0;
+                if (inventory[selectedTool] === 0) {
+                    document.getElementById(`tool-${selectedTool}`).classList.remove('selected-tool');
+                    selectedTool = null;
+                }
+                renderFarm();
+            }
+        }
+
+        // ==========================================
+        // 🏪 STORE LOGIC 
+        // ==========================================
+        function toggleStore() {
+            if (isDayOver) {
+                showMessage("The store is closed for the night! 🌙");
+                return;
+            }
+
+            if (isStoreOpen === true) {
+                isStoreOpen = false;
+                const btn = document.getElementById('storeToggleBtn');
+                btn.innerText = "Open Store 🏪";
+                btn.classList.replace('bg-red-500', 'bg-green-500');
+                btn.classList.replace('hover:bg-red-400', 'hover:bg-green-400');
+                btn.classList.replace('border-red-700', 'border-green-700');
+
+                document.getElementById('customerInfo').style.display = 'none';
+                document.getElementById('waitingMessage').style.display = 'block';
+                document.getElementById('waitingMessage').innerText = "Store is CLOSED! Zzz... 💤";
+                
+                clearTimeout(customerTimer); 
+            } else {
+                isStoreOpen = true;
+                const btn = document.getElementById('storeToggleBtn');
+                btn.innerText = "Close Store 🛑";
+                btn.classList.replace('bg-green-500', 'bg-red-500');
+                btn.classList.replace('hover:bg-green-400', 'hover:bg-red-400');
+                btn.classList.replace('border-green-700', 'border-red-700');
+
+                generateNewCustomer();
+            }
+        }
+
+        function passCustomer() {
+            if (isDayOver || !isStoreOpen) return;
+            document.getElementById('customerInfo').style.display = 'none';
+            document.getElementById('waitingMessage').style.display = 'block';
+            document.getElementById('waitingMessage').innerText = "Customer left. Next one in 10 seconds... ⏳";
+
+            customerTimer = setTimeout(() => {
+                if (isStoreOpen && !isDayOver) {
+                    generateNewCustomer();
+                }
+            }, 10000); 
+        }
+
+        function generateNewCustomer() {
+            if (!isStoreOpen || isDayOver) return;
+
+            document.getElementById('customerInfo').style.display = 'flex';
+            document.getElementById('waitingMessage').style.display = 'none';
+
+            let randomNum = Math.floor(Math.random() * 4); 
+            
+            if (randomNum === 0) {
+                currentCustomer.wants = 'turnip';
+                currentCustomer.reward = 35;
+                document.getElementById('customerText').innerText = "🐷 Penny Pig wants 1 🧅 Turnip!";
+            } else if (randomNum === 1) {
+                currentCustomer.wants = 'watermelon';
+                currentCustomer.reward = 150; 
+                document.getElementById('customerText').innerText = "🐐 Gary Goat wants 1 🍉 Melon!";
+            } else if (randomNum === 2) {
+                currentCustomer.wants = 'turnip';
+                currentCustomer.reward = 45; 
+                document.getElementById('customerText').innerText = "🐔 Chloe Chicken wants 1 🧅 Turnip!";
+            } else {
+                currentCustomer.wants = 'golden';
+                currentCustomer.reward = 1200; 
+                document.getElementById('customerText').innerText = "👑 King Bullfrog wants 1 🎃 Golden Pumpkin!";
+            }
+            document.getElementById('customerReward').innerText = `Reward: ${currentCustomer.reward} 🪙`;
+        }
+
+        function sellToCustomer() {
+            if (isDayOver || !isStoreOpen) return;
+
+            if (pantry[currentCustomer.wants] > 0) {
+                pantry[currentCustomer.wants]--;
+                document.getElementById(`pantry-${currentCustomer.wants}`).innerText = pantry[currentCustomer.wants];
+                
+                coins += currentCustomer.reward;
+                document.getElementById('coinDisplay').innerText = coins;
+                showMessage(`Sold! You got ${currentCustomer.reward} coins! 🤝`);
+                
+                generateNewCustomer(); 
+            } else {
+                showMessage(`You don't have what they want! Check your backpack!`);
+            }
+        }
+
+        // ==========================================
+        // 🌱 THE FARM GROWTH & BUG SPAWNER LOOP
+        // ==========================================
+        function spawnBug() {
+            if (isDayOver) return;
+            let growingPlots = plots.filter(p => p.crop !== null && !p.isReady && !p.hasBug);
+            
+            if (growingPlots.length > 0 && Math.random() < 0.3) {
+                let randomPlot = growingPlots[Math.floor(Math.random() * growingPlots.length)];
+                randomPlot.hasBug = true;
+                showMessage("Oh no! A bug is eating your crops! 🐛");
+                renderFarm();
+            }
+        }
+        setInterval(spawnBug, 6000);
+
+        function growCrops() {
+            if (isDayOver) return;
+            plots.forEach(plot => {
+                if (plot.crop !== null && !plot.isReady && plot.hasBug === false) {
+                    plot.growth++; 
+                    if (plot.growth >= cropInfo[plot.crop].growTime) {
+                        plot.isReady = true;
+                    }
+                }
+            });
+            renderFarm();
+        }
+        setInterval(growCrops, 1000);
+
+        function renderFarm() {
+            const grid = document.getElementById('farmGrid');
+            grid.innerHTML = ''; 
+            plots.forEach(plot => {
+                const plotElement = document.createElement('div');
+                plotElement.className = 'plot h-24 bg-[#5c4033] rounded-xl border-4 border-[#3e2723] flex justify-center items-center text-5xl cursor-pointer shadow-inner relative';
+                
+                if (plot.hasBug) {
+                    plotElement.innerHTML = '🐛';
+                    plotElement.classList.add('bug-crop');
+                    plotElement.classList.replace('bg-[#5c4033]', 'bg-red-900'); 
+                    plotElement.classList.replace('border-[#3e2723]', 'border-red-700');
+                } else if (plot.isReady) {
+                    plotElement.innerHTML = cropInfo[plot.crop].emoji;
+                    plotElement.classList.add('ready-crop');
+                    plotElement.classList.replace('bg-[#5c4033]', 'bg-green-700'); 
+                } else if (plot.crop !== null) {
+                    plotElement.innerHTML = '🌱';
+                    let scale = 0.5 + (0.5 * (plot.growth / cropInfo[plot.crop].growTime));
+                    plotElement.style.transform = `scale(${scale})`;
+                }
+
+                plotElement.onclick = () => clickPlot(plot.id);
+                grid.appendChild(plotElement);
+            });
+        }
+
+        renderFarm();
+        generateNewCustomer();
+
+    </script>
+</body>
+</html>
+
