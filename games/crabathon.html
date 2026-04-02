@@ -354,26 +354,47 @@
 
 
    <!-- Firebase SDK -->
-   <script type="module">
+   <script>
+// === OFFLINE SHIM: replaces Firebase with localStorage leaderboard ===
+(function(){
+  const LS = 'oz_lb_' + location.pathname.split('/').pop();
+  window.__firebase_config = '{"projectId":"offline"}';
+  window.__app_id = 'offline';
+  window.__initial_auth_token = null;
+  window.initializeApp  = function(){ return {}; };
+  window.getAuth        = function(){ return {}; };
+  window.getFirestore   = function(){ return {}; };
+  window.signInAnonymously     = function(){ return Promise.resolve(); };
+  window.signInWithCustomToken = function(){ return Promise.resolve(); };
+  window.onAuthStateChanged = function(auth, cb){
+    setTimeout(function(){ cb({uid:'local-'+Math.random().toString(36).slice(2,8)}); }, 80);
+  };
+  window.collection = function(){ return {_k: LS}; };
+  window.doc        = function(){ return {_k: LS}; };
+  window.getDoc     = function(){ return Promise.resolve({exists:function(){return false;},data:function(){return null;}}); };
+  window.setDoc     = function(){ return Promise.resolve(); };
+  window.addDoc = function(col, data){
+    var arr = JSON.parse(localStorage.getItem(col._k||LS)||'[]');
+    arr.push(data); arr.sort(function(a,b){return (b.score||0)-(a.score||0);});
+    localStorage.setItem(col._k||LS, JSON.stringify(arr.slice(0,20)));
+    return Promise.resolve({id: Date.now().toString()});
+  };
+  window.onSnapshot = function(col, cb){
+    var arr = JSON.parse(localStorage.getItem(col._k||LS)||'[]');
+    var fake = arr.map(function(d){ return {data:function(){return d;}, id:Math.random().toString(36)}; });
+    cb({forEach:function(fn){fake.forEach(fn);}, docs:fake}); return function(){};
+  };
+  window.getDocs = function(col){
+    var arr = JSON.parse(localStorage.getItem(col._k||LS)||'[]');
+    var fake = arr.map(function(d){ return {data:function(){return d;}, id:Math.random().toString(36)}; });
+    return Promise.resolve({forEach:function(fn){fake.forEach(fn);}, docs:fake});
+  };
+})();
+// === END SHIM ===
        // Import Firebase modules
-       import { initializeApp, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-       import {
-           getAuth,
-           signInAnonymously,
-           signInWithCustomToken,
-           onAuthStateChanged
-       } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-       import {
-           getFirestore,
-           doc,
-           setDoc,
-           onSnapshot
-       } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-
        // --- Firebase & App Configuration ---
       
-       const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-crabathon-app';
+       const appId = window.__app_id || 'offline';
        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
