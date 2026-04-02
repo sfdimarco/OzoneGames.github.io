@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Big Back Attack: Syrup Rays 🍕</title>
+    <style>
+        :root {
+            --bg: #050510;
+            --accent: #ffcc00; 
+            --veggie: #4cd137;
+            --danger: #ff4757;
+            --card: #1a1a3a;
+            --text: #ffffff;
+            --gold: #ffd700;
+            --syrup: #d4a017; /* Golden Maple Syrup Color! */
+        }
+
+        body {
+            margin: 0; padding: 0; background: var(--bg); color: var(--text);
+            font-family: 'Segoe UI', sans-serif;
+            display: flex; flex-direction: column; align-items: center;
+            height: 100vh; overflow: hidden; touch-action: none;
+        }
+
+        #hud {
+            width: 100%; max-width: 600px; display: flex; justify-content: space-around;
+            padding: 10px; background: var(--card); font-weight: bold; font-size: 0.9rem;
+            border-bottom: 3px solid var(--accent);
+            text-align: center;
+        }
+
+        #game-container {
+            position: relative; width: 100%; max-width: 600px;
+            height: 70vh; background: #000;
+            border: 4px solid #333; border-radius: 20px; overflow: hidden;
+            margin-top: 5px;
+            cursor: none; 
+        }
+
+        canvas { width: 100%; height: 100%; display: block; }
+
+        .overlay {
+            position: absolute; inset: 0; background: rgba(0,0,0,0.9);
+            display: flex; flex-direction: column; align-items: center;
+            justify-content: center; z-index: 110; padding: 20px;
+            cursor: default;
+        }
+
+        .hidden { display: none !important; }
+
+        button {
+            background: var(--accent); border: none; padding: 12px 30px;
+            border-radius: 10px; font-weight: bold; color: #000; cursor: pointer;
+            font-size: 1.1rem; margin-top: 15px;
+        }
+
+        #announcer {
+            position: absolute; bottom: 15%; left: 50%; transform: translateX(-50%);
+            padding: 15px 25px; border-radius: 15px; text-align: center;
+            z-index: 100; pointer-events: none; transition: all 0.3s;
+            width: 85%;
+        }
+
+        .good-news { background: rgba(255, 204, 0, 0.9); color: #000; box-shadow: 0 0 20px var(--accent); }
+        .bad-news { background: rgba(76, 209, 55, 0.9); color: #000; box-shadow: 0 0 20px var(--veggie); }
+
+        #leaderboard-box {
+            background: rgba(26, 26, 58, 0.95);
+            padding: 15px; border-radius: 15px; width: 90%;
+            max-height: 50%; overflow-y: auto; text-align: center;
+            border: 2px solid var(--gold);
+        }
+
+        .score-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #333; font-size: 0.9rem; }
+        .rank-1 { color: var(--gold); text-shadow: 0 0 5px var(--gold); font-weight: bold; }
+        input { padding: 12px; border-radius: 8px; border: none; width: 80%; margin-top: 10px; font-size: 1rem; color: #000; }
+        #timer-container { width: 100%; height: 8px; background: #222; position: absolute; bottom: 0; }
+        #timer-bar { width: 0%; height: 100%; background: var(--syrup); transition: width 0.1s linear; }
+    </style>
+</head>
+<body>
+
+    <div id="hud">
+        <div>⭐ Score<br><span id="score">0</span></div>
+        <div>🏆 World Best<br><span id="best-score">---</span></div>
+        <div>🥇 Your Best<br><span id="personal-best">---</span></div>
+        <div>❤️ Lives<br><span id="lives">3</span></div>
+    </div>
+
+    <div id="game-container">
+        <canvas id="gameCanvas"></canvas>
+        <div id="timer-container"><div id="timer-bar"></div></div>
+
+        <div id="announcer" class="hidden">
+            <span style="font-weight:bold; display:block;" id="ann-name">POWER!</span>
+            <span style="font-size:0.85rem; font-style:italic;" id="ann-desc">Desc</span>
+        </div>
+
+        <div id="start-screen" class="overlay">
+            <h1 style="color:var(--accent); margin:0; font-size: 2.2rem;">BIG BACK ATTACK</h1>
+            <p style="text-align:center;">NEW: Syrup Rays 🍯 & Level 3 Protection!</p>
+            <div id="leaderboard-box"><div id="scores-list">Connecting to Cloud...</div></div>
+            <button onclick="startGame()">START MISSION</button>
+        </div>
+
+        <div id="game-over-screen" class="overlay hidden" style="z-index: 120;">
+            <h2 style="color:var(--danger)">FULL STOMACH!</h2>
+            <p>Score: <span id="final-score-val">0</span></p>
+            <input type="text" id="player-name" placeholder="Chef Name" maxlength="12">
+            <button id="save-btn" onclick="submitScore()">SAVE FOREVER</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, onSnapshot, doc, getDoc, setDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const firebaseConfig = JSON.parse(__firebase_config);
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'big-back-attack';
+
+        let currentUser = null;
+        let myPersonalBest = 0;
+        const keys = { Left: false, Right: false };
+
+        async function startAuth() {
+            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) await signInWithCustomToken(auth, __initial_auth_token);
+            else await signInAnonymously(auth);
+        }
+        startAuth();
+
+        onAuthStateChanged(auth, (user) => {
+            currentUser = user;
+            if (currentUser) {
+                loadLeaderboard();
+                loadPersonalBest();
+                seedLegendaryScore();
+            }
+        });
+
+        async function seedLegendaryScore() {
+            const leaderCol = collection(db, 'artifacts', appId, 'public', 'data', 'leaderboard');
+            const snapshot = await getDocs(leaderCol);
+            let kingExists = false;
+            snapshot.forEach(doc => { if(doc.data().score === 5000) kingExists = true; });
+            if (!kingExists) {
+                await addDoc(leaderCol, { name: "Snack King 👑", score: 5000, date: Date.now() });
+            }
+        }
+
+        let powerTimer = 0;
+        const GOOD_DURATION = 15000;
+        const BAD_DURATION = 5000;
+
+        const POWER_LIBRARY = [];
+
+        // 1. CORE SPECIALS
+        POWER_LIBRARY.push(
+            { name: "Pepperoni Slice", emoji: "🍕", desc: "FIREBALL: Melts bricks for 15s!", effect: () => { balls.forEach(b => b.isFire = true); startPowerTimer(GOOD_DURATION, () => balls.forEach(b => b.isFire = false)); }},
+            { name: "Mega Burger", emoji: "🍔", desc: "GIANT: 15s Super Width!", effect: () => { paddle.w = paddle.baseW + 80; startPowerTimer(GOOD_DURATION, () => paddle.w = paddle.baseW); }},
+            { name: "Nacho Bomb", emoji: "🧀", desc: "BOOM: Explosive hits for 15s!", effect: () => { paddle.hasExplosive = true; startPowerTimer(GOOD_DURATION, () => paddle.hasExplosive = false); }},
+            { name: "Soda Fountain", emoji: "🥤", desc: "MULTI: 3 slow extra balls spawn!", effect: () => { const s = CONSTANT_SPEED * 0.6; for(let i=0; i<3; i++) balls.push(createBall(s)); }},
+            { name: "Ice Cream", emoji: "🍦", desc: "FREEZE: Falling snacks slow down!", effect: () => { lootSpeedMod = 0.3; startPowerTimer(GOOD_DURATION, () => lootSpeedMod = 1.0); }},
+            { name: "Golden Apple", emoji: "🍎", desc: "HEAL: +1 Extra Life!", effect: () => { lives++; }}
+        );
+
+        // 2. THE RE-SKINNED FAMILIES
+        const familyTreats = [
+            // UPDATED: Breakfast is now SYRUP RAYS!
+            { type: "Breakfast", icons: ["🥞", "🥓", "🍳"], desc: "SYRUP RAYS: Sweet beams clear bricks!", action: () => { paddle.hasSyrupRays = true; startPowerTimer(GOOD_DURATION, () => paddle.hasSyrupRays = false); }},
+            { type: "Sweets", icons: ["🎂", "🍰", "🍭", "🍬", "🍫", "🍮", "🥧"], desc: "RICH: Points x5 for 15s!", action: () => { scoreMod = 5; startPowerTimer(GOOD_DURATION, () => scoreMod = 1); }},
+            { type: "Salty", icons: ["🍟", "🌭", "🥨", "🍿", "🥪"], desc: "LIGHT: Tiny fast ball for 15s!", action: () => { balls.forEach(b => b.r = 5); ballSpeedMod = 1.5; startPowerTimer(GOOD_DURATION, () => { balls.forEach(b => b.r = 10); ballSpeedMod = 1.0; }); }},
+            { type: "Meat", icons: ["🥩", "🍗", "🍖"], desc: "HEAVY: Ball gets HUGE for 15s!", action: () => { balls.forEach(b => b.r = 25); startPowerTimer(GOOD_DURATION, () => balls.forEach(b => b.r = 10)); }},
+            { type: "Exotic", icons: ["🌮", "🌯", "🍣", "🍱", "🥟"], desc: "MAGNET: Pulls all food to you!", action: () => { paddle.hasMagnet = true; startPowerTimer(GOOD_DURATION, () => paddle.hasMagnet = false); }}
+        ];
+
+        const veggies = ["🥦", "🥬", "🥗", "🥕", "🌽", "🫑", "🥒", "🍆", "🍅", "🧅"];
+
+        while(POWER_LIBRARY.length < 67) {
+            let i = POWER_LIBRARY.length;
+            let isBad = Math.random() < 0.25;
+            if (isBad) {
+                let v = veggies[i % veggies.length];
+                POWER_LIBRARY.push({
+                    name: "Veggie #" + i, emoji: v, isBad: true, desc: "TINY: Shrinks paddle (Level 1-3 only)!",
+                    effect: () => { 
+                        // NEW PROGRESSION LOGIC: Check if level is <= 3
+                        if (level <= 3) {
+                            const old = paddle.w; paddle.w = 40; 
+                            startPowerTimer(BAD_DURATION, () => paddle.w = old); 
+                        } else {
+                            score = Math.max(0, score - 50); // Small point penalty instead of shrinking!
+                            announce({name: "Skill Block!", emoji: "🛡️", desc: "You are too strong to shrink!", isBad: false});
+                        }
+                    }
+                });
+            } else {
+                let fam = familyTreats[i % familyTreats.length];
+                let icon = fam.icons[i % fam.icons.length];
+                POWER_LIBRARY.push({
+                    name: fam.type + " Power", emoji: icon, isBad: false, desc: fam.desc,
+                    effect: fam.action
+                });
+            }
+        }
+
+        function startPowerTimer(ms, cleanup) {
+            powerTimer = ms;
+            if (window.activeCleanup) clearTimeout(window.activeCleanup);
+            window.activeCleanup = setTimeout(() => { cleanup(); powerTimer = 0; }, ms);
+        }
+
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+        const announcer = document.getElementById("announcer");
+        const timerBar = document.getElementById("timer-bar");
+
+        let score = 0, lives = 3, level = 1, gameRunning = false;
+        let scoreMod = 1, ballSpeedMod = 1, lootSpeedMod = 1;
+        let paddle = { x: 0, w: 100, h: 15, baseW: 100, keyboardSpeed: 8, hasMagnet: false, hasExplosive: false, hasSyrupRays: false };
+        let balls = [], bricks = [], powerups = [], explosions = [], syrupBeams = [];
+        const CONSTANT_SPEED = 250 / 60;
+
+        function initBricks() {
+            const cols = 6, rows = 4 + Math.min(level, 2);
+            bricks = [];
+            for (let c = 0; c < cols; c++) {
+                bricks[c] = [];
+                for (let r = 0; r < rows; r++) {
+                    let special = Math.random() < 0.45;
+                    bricks[c][r] = { status: 1, isSpecial: special, color: special ? "#ff9f43" : `hsl(${r*35 + level*15}, 80%, 60%)` };
+                }
+            }
+        }
+
+        function createBall(customSpeed) {
+            const s = customSpeed || CONSTANT_SPEED;
+            return { x: canvas.width/2, y: canvas.height-60, dx: (Math.random() > 0.5 ? 1 : -1) * s, dy: -s, r: 10, isFire: false };
+        }
+
+        function triggerExplosion(x, y) {
+            explosions.push({ x, y, r: 10, maxR: 70, alpha: 1.0 });
+            bricks.flat().forEach(b => {
+                if (b.status === 1) {
+                    let dist = Math.hypot(b.x + 25 - x, b.y + 10 - y);
+                    if (dist < 80) { b.status = 0; score += 20 * scoreMod; if (b.isSpecial) spawnLoot(b.x + 25, b.y); }
+                }
+            });
+        }
+
+        window.startGame = () => {
+            document.getElementById("start-screen").classList.add("hidden");
+            document.getElementById("game-over-screen").classList.add("hidden");
+            score = 0; lives = 3; level = 1; powerTimer = 0; scoreMod = 1; ballSpeedMod = 1;
+            startLevel();
+        };
+
+        function startLevel() {
+            initBricks();
+            balls = [createBall()];
+            powerups = []; explosions = []; syrupBeams = [];
+            gameRunning = true;
+            requestAnimationFrame(gameLoop);
+        }
+
+        function gameLoop() {
+            if (!gameRunning) return;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            if (keys.Left) paddle.x -= paddle.keyboardSpeed;
+            if (keys.Right) paddle.x += paddle.keyboardSpeed;
+            paddle.x = Math.max(0, Math.min(canvas.width - paddle.w, paddle.x));
+
+            if (powerTimer > 0) {
+                powerTimer -= 16.6;
+                timerBar.style.width = (powerTimer / 15000 * 100) + "%";
+            } else { timerBar.style.width = "0%"; }
+
+            document.getElementById("score").innerText = Math.floor(score);
+            document.getElementById("lives").innerText = lives;
+
+            // DRAW BRICKS
+            const bW = (canvas.width - 40) / 6 - 5;
+            const bH = 20;
+            bricks.flat().forEach((b, i) => {
+                if (b.status === 1) {
+                    let r = Math.floor(i/6), c = i%6;
+                    b.x = 20 + c*((canvas.width-40)/6); b.y = 50 + r*25;
+                    ctx.fillStyle = b.color;
+                    ctx.beginPath(); ctx.roundRect(b.x, b.y, bW, bH, 5); ctx.fill();
+                    if(b.isSpecial) { ctx.fillStyle="white"; ctx.fillText("🎁", b.x+10, b.y+15); }
+                }
+            });
+
+            // SYRUP RAYS (Spawning)
+            if (paddle.hasSyrupRays && Math.random() < 0.1) {
+                syrupBeams.push({ x: paddle.x + 5, y: canvas.height - 40 });
+                syrupBeams.push({ x: paddle.x + paddle.w - 5, y: canvas.height - 40 });
+            }
+
+            // SYRUP RAYS (Logic & Drawing)
+            syrupBeams.forEach((s, idx) => {
+                s.y -= 10;
+                // Make it look like syrupy drips!
+                ctx.fillStyle = "#d4a017";
+                ctx.beginPath();
+                ctx.arc(s.x, s.y, 6, 0, Math.PI*2);
+                ctx.fill();
+                ctx.fillRect(s.x - 2, s.y, 4, 15); // Syrupy trail
+                
+                bricks.flat().forEach(b => {
+                    if (b.status === 1 && s.x > b.x && s.x < b.x + bW && s.y < b.y + bH && s.y > b.y) {
+                        b.status = 0; score += 25 * scoreMod; syrupBeams.splice(idx, 1);
+                        if (b.isSpecial) spawnLoot(b.x + bW/2, b.y);
+                    }
+                });
+                if (s.y < 0) syrupBeams.splice(idx, 1);
+            });
+
+            explosions.forEach((ex, i) => {
+                ctx.beginPath(); ctx.arc(ex.x, ex.y, ex.r, 0, Math.PI*2);
+                ctx.fillStyle = `rgba(255, 204, 0, ${ex.alpha})`; ctx.fill();
+                ex.r += 3; ex.alpha -= 0.05;
+                if (ex.alpha <= 0) explosions.splice(i, 1);
+            });
+
+            ctx.fillStyle = paddle.hasSyrupRays ? "#d4a017" : "#ffcc00";
+            ctx.beginPath(); ctx.roundRect(paddle.x, canvas.height-35, paddle.w, paddle.h, 10); ctx.fill();
+
+            powerups.forEach((p, idx) => {
+                if (paddle.hasMagnet) p.x += (paddle.x + paddle.w/2 - p.x) * 0.05;
+                p.y += 2.5 * lootSpeedMod;
+                ctx.font = "28px Arial"; ctx.fillText(p.emoji, p.x-14, p.y);
+                if (p.y > canvas.height-45 && p.x > paddle.x && p.x < paddle.x + paddle.w) {
+                    announce(p); p.effect(); powerups.splice(idx, 1);
+                } else if (p.y > canvas.height) powerups.splice(idx, 1);
+            });
+
+            balls.forEach((ball, bIdx) => {
+                ctx.beginPath(); ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI*2);
+                ctx.fillStyle = ball.isFire ? "#ff4757" : "white"; ctx.fill();
+
+                bricks.flat().forEach(b => {
+                    if (b.status === 1 && ball.x > b.x && ball.x < b.x + bW && ball.y > b.y && ball.y < b.y + bH) {
+                        if (paddle.hasExplosive) triggerExplosion(ball.x, ball.y);
+                        if (!ball.isFire) ball.dy *= -1;
+                        b.status = 0; score += 50 * scoreMod;
+                        if (b.isSpecial) spawnLoot(b.x + bW/2, b.y);
+                    }
+                });
+
+                if (ball.x + ball.dx > canvas.width || ball.x + ball.dx < 0) ball.dx *= -1;
+                if (ball.y + ball.dy < 0) ball.dy *= -1;
+                else if (ball.y + ball.dy > canvas.height - 40) {
+                    if (ball.x > paddle.x && ball.x < paddle.x + paddle.w) {
+                        ball.dy = -Math.abs(ball.dy); ball.dx = (ball.x - (paddle.x + paddle.w/2)) * 0.2;
+                    } else if (ball.y > canvas.height) {
+                        balls.splice(bIdx, 1);
+                        if (balls.length === 0) { lives--; if (lives <= 0) endGame(); else balls.push(createBall()); }
+                    }
+                }
+                ball.x += ball.dx * ballSpeedMod; ball.y += ball.dy * ballSpeedMod;
+            });
+
+            if (bricks.flat().every(b => b.status === 0)) { level++; startLevel(); }
+            requestAnimationFrame(gameLoop);
+        }
+
+        function spawnLoot(x, y) {
+            let p = POWER_LIBRARY[Math.floor(Math.random() * POWER_LIBRARY.length)];
+            powerups.push({ x, y, ...p });
+        }
+
+        function announce(p) {
+            document.getElementById("ann-name").innerText = p.emoji + " " + p.name;
+            document.getElementById("ann-desc").innerText = p.desc;
+            announcer.classList.remove("hidden", "good-news", "bad-news");
+            announcer.classList.add(p.isBad ? "bad-news" : "good-news");
+            setTimeout(() => announcer.classList.add("hidden"), 3000);
+        }
+
+        function endGame() { gameRunning = false; document.getElementById("game-over-screen").classList.remove("hidden"); document.getElementById("final-score-val").innerText = Math.floor(score); }
+
+        window.submitScore = async () => {
+            const name = document.getElementById("player-name").value || "Big Back";
+            if (!currentUser) return;
+            try {
+                await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'leaderboard'), { name, score, date: Date.now() });
+                if (score > myPersonalBest) { await setDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'stats', 'best'), { score: score }); myPersonalBest = score; document.getElementById("personal-best").innerText = score; }
+                document.getElementById("game-over-screen").classList.add("hidden"); document.getElementById("start-screen").classList.remove("hidden");
+            } catch (e) {}
+        };
+
+        function loadLeaderboard() {
+            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'leaderboard'), (s) => {
+                const scores = []; s.forEach(doc => scores.push(doc.data()));
+                scores.sort((a, b) => b.score - a.score);
+                const list = document.getElementById("scores-list"); list.innerHTML = "";
+                if (scores.length > 0) {
+                    document.getElementById("best-score").innerText = Math.floor(scores[0].score);
+                    scores.forEach((s, i) => {
+                        const row = document.createElement("div"); row.className = `score-row ${i === 0 ? 'rank-1' : ''}`;
+                        row.innerHTML = `<span>#${i+1} ${s.name}</span> <span>${Math.floor(s.score)}</span>`;
+                        list.appendChild(row);
+                    });
+                }
+            });
+        }
+
+        async function loadPersonalBest() {
+            if (!currentUser) return;
+            try {
+                const snap = await getDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'stats', 'best'));
+                if (snap.exists()) { myPersonalBest = snap.data().score; document.getElementById("personal-best").innerText = myPersonalBest; }
+            } catch (e) {}
+        }
+
+        canvas.addEventListener("mousemove", (e) => {
+            if (!gameRunning) return;
+            let relX = e.clientX - canvas.getBoundingClientRect().left;
+            paddle.x = Math.max(0, Math.min(canvas.width - paddle.w, relX - paddle.w/2));
+        });
+
+        window.addEventListener("keydown", (e) => { if (e.code === "ArrowLeft" || e.code === "KeyA") keys.Left = true; if (e.code === "ArrowRight" || e.code === "KeyD") keys.Right = true; });
+        window.addEventListener("keyup", (e) => { if (e.code === "ArrowLeft" || e.code === "KeyA") keys.Left = false; if (e.code === "ArrowRight" || e.code === "KeyD") keys.Right = false; });
+        canvas.addEventListener("touchmove", (e) => {
+            let relX = e.touches[0].clientX - canvas.getBoundingClientRect().left;
+            paddle.x = Math.max(0, Math.min(canvas.width - paddle.w, relX - paddle.w/2));
+        }, {passive: false});
+
+        function resize() { canvas.width = document.getElementById("game-container").clientWidth; canvas.height = document.getElementById("game-container").clientHeight; paddle.x = canvas.width/2 - paddle.w/2; }
+        window.addEventListener('resize', resize); resize();
+    </script>
+</body>
+</html>

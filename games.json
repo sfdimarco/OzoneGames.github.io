@@ -160,7 +160,7 @@
       "desc": "Tile-based stealth — navigate a grid to reach a moving vault before the guard catches you.",
       "file": "games/bankheist.html",
       "accent": "yellow",
-      "madeByStudents": false,
+      "madeByStudents": true,
       "tags": ["Stealth", "Grid Puzzle", "Spatial"],
       "notes": "Great for spatial reasoning. Students love the moving vault — it makes simple grid navigation feel like a real problem to solve. Add a timer to increase pressure."
     },
@@ -196,7 +196,7 @@
       "desc": "Every die you need — D4 through D20. Roll multiple dice at once.",
       "file": "games/diceroller.html",
       "accent": "red",
-      "madeByStudents": false,
+      "madeByStudents": true,
       "tags": ["Probability", "Tabletop", "Math Tool"],
       "notes": "One of the most-used things in the room. Tabletop days, math lessons, any time a student wants to leave something to chance. Pairs well with a quick lesson on probability distributions."
     },
@@ -208,9 +208,69 @@
       "desc": "Geometry Dash-style runner. A cat, an obstacle course, one button. Survive as long as you can.",
       "file": "games/geocatdash.html",
       "accent": "orange",
-      "madeByStudents": false,
+      "madeByStudents": true,
       "tags": ["Runner", "One Button", "Timing"],
       "notes": "An accessible entry into canvas animation — simple mechanic, timing that's unforgiving in the right way. Students who beat it are genuinely proud. Good gateway into building their own runner."
+    },
+
+    {
+      "id": "brickbreaker",
+      "title": "Brick Breaker",
+      "emoji": "🧱",
+      "desc": "Classic brick breaker rebuilt by students — aim, bounce, and clear the board.",
+      "file": "games/brickbreaker.html",
+      "accent": "orange",
+      "madeByStudents": true,
+      "tags": ["Breakout", "Classic", "Arcade"],
+      "notes": "A foundational game — students built this from scratch and learned about collision detection, velocity, and angles through play. Ask: 'what happens to the angle when the ball hits the side vs the bottom of a brick?'"
+    },
+
+    {
+      "id": "brickbreakerplus",
+      "title": "Brick Breaker+",
+      "emoji": "💥",
+      "desc": "Brick Breaker with student-designed upgrades — power-ups, faster balls, and extra chaos.",
+      "file": "games/brickbreakerplus.html",
+      "accent": "red",
+      "madeByStudents": true,
+      "tags": ["Breakout", "Power-ups", "Upgraded"],
+      "notes": "Students took the base brick breaker and asked 'what if we added...?' — this is the result. The upgrade design process was a real game design conversation: balance, cost, fun. Very Momentum Lab."
+    },
+
+    {
+      "id": "potatodash",
+      "title": "Potato Dash!",
+      "emoji": "🥔",
+      "desc": "A potato on the run. Side-scrolling dash with student-designed obstacles and a pink bow.",
+      "file": "games/potatodash.html",
+      "accent": "yellow",
+      "madeByStudents": true,
+      "tags": ["Runner", "Dodge", "Cute"],
+      "notes": "One of the most purely student-named things in the lab. A potato. In a pink bow. Running. Nobody questioned it. The game is better for it."
+    },
+
+    {
+      "id": "nicosflappy",
+      "title": "Nico's Sonic Flappy",
+      "emoji": "🦔",
+      "desc": "Nico's personal Sonic-themed Flappy Bird. This game belongs to Nico — please don't edit without permission.",
+      "file": "games/nicosflappy.html",
+      "accent": "blue",
+      "madeByStudents": true,
+      "tags": ["Flappy Bird", "Sonic", "Personal"],
+      "notes": "A student's personal project — they named it, themed it, and staked ownership publicly in the filename itself. That kind of ownership is everything you want to see. This is their game."
+    },
+
+    {
+      "id": "mooksynth",
+      "title": "Mook Synth v6",
+      "emoji": "🎹",
+      "desc": "A full step-sequencer and drum machine. 16 steps, 8 tracks, synesthesia color map, oscilloscope, and WebAudio synthesis — all in your browser.",
+      "file": "games/mooksynth.html",
+      "accent": "purple",
+      "madeByStudents": false,
+      "tags": ["Audio Tool", "Sequencer", "WebAudio"],
+      "notes": "Mook's personal synthesizer — built from scratch using the Web Audio API and React. The color map is his synesthesia system: every drum and note is a number, every number is a color. Used live in class to demonstrate how music, math, and code overlap."
     },
 
     {
@@ -220,7 +280,7 @@
       "desc": "Factory simulation — manage inputs, watch for bottlenecks, and optimize throughput.",
       "file": "games/milkfactory.html",
       "accent": "cyan",
-      "madeByStudents": false,
+      "madeByStudents": true,
       "tags": ["Simulation", "Systems Thinking", "Factory"],
       "notes": "Students find it funny, which makes the systems thinking stick. Ask: 'where is the bottleneck?' before they start optimizing. The absurdity of milk cartons makes the concept less threatening."
     }

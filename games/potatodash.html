@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Potato Dash!</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            /* A fun, colorful pink background for our webpage */
+            background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 99%, #fecfef 100%);
+            margin: 0;
+            overflow: hidden; /* Stops the screen from scrolling down when we press Spacebar */
+            touch-action: none; /* Makes touch screens work better for games */
+        }
+        canvas {
+            /* Makes our game board look like a real screen with rounded corners */
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            background-color: #ffe4e1; /* Misty Rose pink for the sky */
+            border: 4px solid #ff69b4; /* Hot pink border */
+            border-radius: 12px;
+        }
+    </style>
+</head>
+<body class="h-screen flex flex-col items-center justify-center font-sans">
+
+    <div class="text-center mb-4">
+        <h1 class="text-5xl font-extrabold text-pink-600 drop-shadow-md mb-2">Potato Dash!</h1>
+        <p class="text-pink-800 font-bold text-lg">Tap the screen or press SPACE to jump over the pink bows!</p>
+    </div>
+
+    <!-- This canvas is our drawing board where the game happens! -->
+    <canvas id="gameCanvas" width="800" height="400" class="max-w-full"></canvas>
+
+    <div class="mt-4 text-pink-800 text-xl font-bold">
+        Score: <span id="scoreText">0</span>
+    </div>
+
+<script>
+    // 1. SETTING UP OUR GAME BOARD
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+    const scoreElement = document.getElementById("scoreText");
+
+    // 2. OUR GAME VARIABLES (The rules and pieces of our game)
+    let gameSpeed = 8; // FAST gameplay! (Try changing this number later)
+    let gravity = 0.9; // The invisible magnet pulling our potato down
+    let score = 0;
+    let isGameOver = false;
+
+    // This is our main character: The Potato! 🥔
+    const potato = {
+        x: 100,           // How far from the left
+        y: 200,           // How far from the top
+        width: 40,        // How wide is the potato
+        height: 50,       // How tall is the potato
+        velocityY: 0,     // How fast is it moving up or down right now?
+        jumpPower: -13,   // How high it jumps (Negative means UP in code!)
+        rotation: 0       // Potatoes tumble when they jump!
+    };
+
+    // This is the floor
+    const groundHeight = 50;
+    const groundY = canvas.height - groundHeight;
+
+    // This list will hold all our pink bows
+    let bows = [];
+
+    // 3. GAME FUNCTIONS (The actions in our game)
+
+    // Make the potato jump!
+    function jump() {
+        // Only jump if we are touching the ground (or close to it)
+        if (potato.y + potato.height >= groundY) {
+            potato.velocityY = potato.jumpPower;
+        }
+        
+        // If the game is over and we jump, restart the game!
+        if (isGameOver) {
+            resetGame();
+        }
+    }
+
+    // Add a new bow to the screen
+    function spawnBow() {
+        let bow = {
+            x: canvas.width, // Start all the way on the right side
+            y: groundY - 40, // Sit right on the ground
+            width: 40,
+            height: 40
+        };
+        bows.push(bow);
+    }
+
+    // Put everything back to the start
+    function resetGame() {
+        potato.y = 200;
+        potato.velocityY = 0;
+        bows = [];
+        score = 0;
+        gameSpeed = 8; 
+        isGameOver = false;
+        scoreElement.innerText = score;
+        spawnBow(); // Give us one bow to start
+        gameLoop(); // Start the engine!
+    }
+
+    // 4. DRAWING FUNCTIONS (The paintbrushes!)
+
+    function drawPotato() {
+        ctx.save(); // Save the canvas state
+        
+        // Move our "paintbrush" to the center of the potato
+        ctx.translate(potato.x + potato.width / 2, potato.y + potato.height / 2);
+        
+        // Spin the potato a little bit if it's in the air!
+        if (potato.y + potato.height < groundY) {
+            potato.rotation += 0.1;
+        } else {
+            // Snap back to normal when on the ground
+            potato.rotation = Math.round(potato.rotation / (Math.PI * 2)) * (Math.PI * 2); 
+            // Just a tiny wobble on the ground
+            potato.rotation += 0.05; 
+        }
+        ctx.rotate(potato.rotation);
+
+        // Draw the Potato body (Brown Oval)
+        ctx.fillStyle = "#8B5A2B"; // Potato brown
+        ctx.beginPath();
+        ctx.ellipse(0, 0, potato.width / 2, potato.height / 2, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Draw cute little eyes
+        ctx.fillStyle = "black";
+        ctx.beginPath();
+        ctx.arc(10, -5, 3, 0, Math.PI * 2); // Right eye
+        ctx.arc(10, 5, 3, 0, Math.PI * 2);  // Left eye
+        ctx.fill();
+
+        ctx.restore(); // Put the canvas back to normal
+    }
+
+    function drawBows() {
+        ctx.fillStyle = "#FF1493"; // Deep Pink!
+        
+        for (let i = 0; i < bows.length; i++) {
+            let bow = bows[i];
+            
+            // Draw a cute bow shape using two triangles overlapping
+            ctx.beginPath();
+            // Left triangle
+            ctx.moveTo(bow.x + bow.width/2, bow.y + bow.height/2); // Center knot
+            ctx.lineTo(bow.x, bow.y); // Top left
+            ctx.lineTo(bow.x, bow.y + bow.height); // Bottom left
+            
+            // Right triangle
+            ctx.lineTo(bow.x + bow.width/2, bow.y + bow.height/2); // Back to center knot
+            ctx.lineTo(bow.x + bow.width, bow.y); // Top right
+            ctx.lineTo(bow.x + bow.width, bow.y + bow.height); // Bottom right
+            ctx.fill();
+
+            // Draw a little circle in the middle for the knot
+            ctx.fillStyle = "#FF69B4"; // Hot pink
+            ctx.beginPath();
+            ctx.arc(bow.x + bow.width/2, bow.y + bow.height/2, 8, 0, Math.PI*2);
+            ctx.fill();
+            ctx.fillStyle = "#FF1493"; // Reset color for the next bow
+        }
+    }
+
+    function drawGround() {
+        // Draw the main floor
+        ctx.fillStyle = "#FFB6C1"; // Light pink ground
+        ctx.fillRect(0, groundY, canvas.width, groundHeight);
+        
+        // Draw a neat little stripe on the top of the floor
+        ctx.fillStyle = "#FF69B4";
+        ctx.fillRect(0, groundY, canvas.width, 5);
+    }
+
+    // 5. THE GAME LOOP (The beating heart of our game)
+    // This function runs super fast, over and over, like a flipbook!
+    function gameLoop() {
+        if (isGameOver) {
+            // If we crashed, draw a Game Over message
+            ctx.fillStyle = "rgba(0, 0, 0, 0.5)"; // See-through black
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.fillStyle = "white";
+            ctx.font = "40px Arial";
+            ctx.textAlign = "center";
+            ctx.fillText("CRUNCH! Game Over!", canvas.width / 2, canvas.height / 2);
+            ctx.font = "20px Arial";
+            ctx.fillText("Press SPACE to try again", canvas.width / 2, canvas.height / 2 + 40);
+            return; // Stop the flipbook
+        }
+
+        // Clear the screen for the next frame
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // --- MATH & MOVEMENT ---
+
+        // Gravity pulls the potato down
+        potato.velocityY += gravity;
+        potato.y += potato.velocityY;
+
+        // Stop the potato from falling through the floor!
+        if (potato.y + potato.height > groundY) {
+            potato.y = groundY - potato.height;
+            potato.velocityY = 0;
+        }
+
+        // Move the bows to the left (this makes it look like we are running right!)
+        for (let i = 0; i < bows.length; i++) {
+            bows[i].x -= gameSpeed;
+
+            // Did we hit a bow? (Collision Detection - checking if two boxes overlap)
+            // We make the hit box a tiny bit smaller than the actual art so it feels fair
+            if (
+                potato.x < bows[i].x + bows[i].width - 10 &&
+                potato.x + potato.width - 10 > bows[i].x &&
+                potato.y < bows[i].y + bows[i].height - 10 &&
+                potato.y + potato.height - 10 > bows[i].y
+            ) {
+                isGameOver = true; // CRASH!
+            }
+        }
+
+        // Give the player a point when a bow goes off the screen safely
+        if (bows.length > 0 && bows[0].x + bows[0].width < 0) {
+            bows.shift(); // Remove the old bow from our list
+            score++;
+            scoreElement.innerText = score;
+            
+            // Make the game slowly get faster and harder!
+            gameSpeed += 0.2; 
+        }
+
+        // Decide when to add the next bow
+        // We use Math.random() so we don't know exactly when it's coming!
+        if (bows.length === 0 || (canvas.width - bows[bows.length - 1].x > 300 && Math.random() < 0.03)) {
+            spawnBow();
+        }
+
+        // --- DRAW EVERYTHING ---
+        drawGround();
+        drawBows();
+        drawPotato();
+
+        // Ask the computer to run this function again for the next frame!
+        requestAnimationFrame(gameLoop);
+    }
+
+    // 6. CONTROLS (Listening for the player)
+    
+    // Listen for the spacebar
+    window.addEventListener("keydown", function(event) {
+        if (event.code === "Space") {
+            jump();
+        }
+    });
+
+    // Listen for touching the screen (for iPads/Phones)
+    window.addEventListener("touchstart", function(event) {
+        jump();
+    });
+    
+    // Listen for mouse clicks
+    canvas.addEventListener("mousedown", function(event) {
+        jump();
+    });
+
+    // Start the game for the first time!
+    resetGame();
+
+</script>
+</body>
+</html>
